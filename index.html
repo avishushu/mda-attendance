@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>מערכת נוכחות מד"א - סופי</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #e31e24; --secondary: #2c3e50; --bg: #f4f7f6; --success: #2ecc71; --admin: #8e44ad; }
+        * { box-sizing: border-box; font-family: 'Heebo', sans-serif; }
+        body { background: var(--bg); margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; text-align: right; }
+        button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .hidden { display: none; }
+        .section { margin-top: 20px; padding-top: 15px; border-top: 2px solid #eee; text-align: right; }
+        .report-item { background: #f9f9f9; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #ddd; }
+        .copy-btn { background: var(--secondary); font-size: 12px; width: auto; padding: 5px 10px; margin-left: 5px; color: white; border: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="card" id="auth-card">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Magen_David_Adom_Logo.svg/1200px-Magen_David_Adom_Logo.svg.png" width="60">
+    <h2>נוכחות מד"א</h2>
+    <input type="text" id="full-name" placeholder="שם מלא">
+    <input type="number" id="id-number" placeholder="מספר תעודת זהות">
+    <input type="email" id="email" placeholder="אימייל">
+    <input type="password" id="password" placeholder="סיסמה">
+    <button onclick="handleAuth()">כניסה / הרשמה</button>
+</div>
+
+<div class="card hidden" id="main-app">
+    <h2 id="welcome-msg">שלום</h2>
+    <div id="role-tag" style="font-weight: bold; margin-bottom: 15px;"></div>
+
+    <div id="admin-view" class="hidden section" style="border-color: var(--admin);">
+        <h3 style="color: var(--admin)">אישור מדריכים (מנהל)</h3>
+        <div id="users-list"></div>
+    </div>
+
+    <div id="instructor-view" class="hidden section">
+        <h3>ניהול מפגש</h3>
+        <input type="text" id="group-code" placeholder="קוד קבוצה">
+        <input type="number" id="meeting-num" placeholder="מספר מפגש">
+        <button onclick="updateLocation()" style="background: #3498db">עדכן מיקום ומפגש</button>
+        <button id="toggle-btn" onclick="toggleSession()">פתח רישום</button>
+        <div class="section">
+            <button onclick="loadInstructorReports()" style="background: var(--secondary)">טען דוחות והיסטוריה</button>
+            <div id="instructor-reports"></div>
+        </div>
+    </div>
+
+    <div id="student-view" class="hidden section">
+        <input type="text" id="group-code-student" placeholder="הזן קוד קבוצה">
+        <button onclick="markAttendance()" style="background: var(--success)">סמן נוכחות (GPS)</button>
+    </div>
+
+    <button onclick="auth.signOut().then(() => location.reload())" style="background:#95a5a6; margin-top:30px; font-size:12px;">התנתקות</button>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE",
+        authDomain: "attendancemda.firebaseapp.com",
+        projectId: "attendancemda",
+        storageBucket: "attendancemda.firebasestorage.app",
+        messagingSenderId: "303165146059",
+        appId: "1:303165146059:web:606d5d5ece96d9fe702c4e"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+    const ADMIN_EMAIL = "AnfinityRoot@gmail.com";
+
+    async function handleAuth() {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const name = document.getElementById('full-name').value;
+        const idNum = document.getElementById('id-number').value;
+
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+        } catch (e) {
+            if(!name || !idNum) return alert("לרישום חובה שם ותעודת זהות");
+            try {
+                const res = await auth.createUserWithEmailAndPassword(email, password);
+                await db.collection('users').doc(res.user.uid).set({
+                    name: name, idNumber: idNum, uid: res.user.uid, email: email,
+                    role: (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ? 'admin' : 'student'
+                });
+            } catch (err) { alert(err.message); }
+        }
+    }
+
+    auth.onAuthStateChanged(async user => {
+        if (user) {
+            const doc = await db.collection('users').doc(user.uid).get();
+            const u = doc.data();
+            document.getElementById('auth-card').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('welcome-msg').innerText = "שלום, " + u.name;
+            if(u.role === 'admin') {
+                document.getElementById('admin-view').classList.remove('hidden');
+                document.getElementById('instructor-view').classList.remove('hidden');
+                loadUsersForAdmin();
+            } else if(u.role === 'instructor') {
+                document.getElementById('instructor-view').classList.remove('hidden');
+            } else {
+                document.getElementById('student-view').classList.remove('hidden');
+            }
+        }
+    });
+
+    function loadUsersForAdmin() {
+        db.collection('users').where('role', '==', 'student').onSnapshot(snap => {
+            const list = document.getElementById('users-list');
+            list.innerHTML = "";
+            snap.forEach(doc => {
+                const u = doc.data();
+                const div = document.createElement('div');
+                div.innerHTML = `${u.name} <button onclick="makeInstructor('${u.uid}')">אשר מדריך</button>`;
+                list.appendChild(div);
+            });
+        });
+    }
+
+    async function makeInstructor(uid) {
+        await db.collection('users').doc(uid).update({ role: 'instructor' });
+    }
+
+    async function updateLocation() {
+        const code = document.getElementById('group-code').value;
+        const num = document.getElementById('meeting-num').value;
+        navigator.geolocation.getCurrentPosition(async pos => {
+            await db.collection('groups').doc(code).set({
+                lat: pos.coords.latitude, lon: pos.coords.longitude, isOpen: false, meetingNum: num
+            }, {merge: true});
+            alert("מפגש עודכן");
+        });
+    }
+
+    async function toggleSession() {
+        const code = document.getElementById('group-code').value;
+        const d = await db.collection('groups').doc(code).get();
+        await db.collection('groups').doc(code).update({ isOpen: !d.data().isOpen });
+        alert("סטטוס רישום שונה");
+    }
+
+    async function loadInstructorReports() {
+        const code = document.getElementById('group-code').value;
+        const list = document.getElementById('instructor-reports');
+        const snap = await db.collection('reports').where('groupCode', '==', code).get();
+        list.innerHTML = "";
+        snap.forEach(async reportDoc => {
+            const attendeesSnap = await db.collection('reports').doc(reportDoc.id).collection('present').get();
+            let fullList = [];
+            attendeesSnap.forEach(p => {
+                fullList.push(`${p.data().name} | ת.ז: ${p.data().idNumber} | זמן: ${p.data().time}`);
+            });
+            const div = document.createElement('div');
+            div.className = 'report-item';
+            div.innerHTML = `<strong>מפגש מיום ${reportDoc.id.split('_')[0]}</strong><br>
+                <button class="copy-btn" onclick="copyText('${fullList.join('\\n')}')">העתק רשימה מלאה</button>`;
+            list.appendChild(div);
+        });
+    }
+
+    async function markAttendance() {
+        const code = document.getElementById('group-code-student').value;
+        const d = await db.collection('groups').doc(code).get();
+        if(!d.exists || !d.data().isOpen) return alert("רישום סגור");
+        navigator.geolocation.getCurrentPosition(async pos => {
+            const dist = getDistance(pos.coords.latitude, pos.coords.longitude, d.data().lat, d.data().lon);
+            if(dist < 150) {
+                const uDoc = await db.collection('users').doc(auth.currentUser.uid).get();
+                const u = uDoc.data();
+                const dateId = new Date().toLocaleDateString('he-IL').replace(/\./g, '-');
+                const reportId = `${dateId}_${code}`;
+                await db.collection('reports').doc(reportId).set({ groupCode: code }, {merge:true});
+                await db.collection('reports').doc(reportId).collection('present').doc(auth.currentUser.uid).set({
+                    name: u.name, idNumber: u.idNumber, time: new Date().toLocaleTimeString('he-IL')
+                });
+                alert("נוכחות נרשמה!");
+            } else { alert("רחוק מדי"); }
+        });
+    }
+
+    function copyText(text) {
+        navigator.clipboard.writeText(text.replace(/\\n/g, '\n')).then(() => alert("הועתק!"));
+    }
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
+        const dLat = (lat2-lat1)*Math.PI/180; const dLon = (lon2-lon1)*Math.PI/180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+</script>
+</body>
+</html>
