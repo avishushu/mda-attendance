@@ -49,7 +49,7 @@
         <div class="app-subtitle">מתנדבי מגן דוד אדום</div>
     </div>
     <div class="main-container">
-        <div class="card" style="text-align: center; margin-top: 0;">
+        <div class="card" style="text-align: center;">
             <h3 style="margin-top: 0; color: var(--mda-dark);">כניסה למערכת</h3>
             <input type="text" id="reg-name" placeholder="שם מלא" oninput="validateAuthForm()">
             <input type="number" id="reg-id" placeholder="תעודת זהות" inputmode="numeric" oninput="validateAuthForm()">
@@ -88,9 +88,10 @@
             <h2>עדכון פרטים</h2>
             <button onclick="toggleProfile(false)" style="background:none; border:none; font-size:24px; cursor:pointer;">✕</button>
         </div>
+        <p style="color:gray; font-size: 14px;">הזן את פרטי הקשר שלך לעדכון המערכת.</p>
         <input type="email" id="p-email" placeholder="אימייל (אופציונלי)">
         <input type="tel" id="p-phone" placeholder="טלפון (אופציונלי)">
-        <button class="btn-primary" style="margin-top:20px;" onclick="saveProfile()">שמור שינויים</button>
+        <button class="btn-primary" style="margin-top:20px;" id="btn-save-profile" onclick="saveProfile()">שמור שינויים</button>
     </div>
 </div>
 
@@ -109,7 +110,8 @@
     const auth = firebase.auth();
     let meetingListener = null;
 
-    auth.signInAnonymously();
+    // חיבור אנונימי ראשוני
+    auth.signInAnonymously().catch(e => console.error("Auth init error:", e));
 
     function validateAuthForm() {
         const name = document.getElementById('reg-name').value.trim();
@@ -123,12 +125,23 @@
         const code = document.getElementById('reg-code').value.trim();
         const user = auth.currentUser;
 
+        if(!user) return alert("שגיאת מערכת - נסה לרענן");
+
         let groupId = null;
         if(code) {
             const gSnap = await db.collection('groups_v2').where('code', '==', code).limit(1).get();
             if(!gSnap.empty) {
                 groupId = gSnap.docs[0].id;
-                await gSnap.docs[0].ref.collection('roster').doc(user.uid).set({ name, idNum, uid: user.uid }, {merge:true});
+                // שימוש ב-SET עם MERGE כדי ליצור/לעדכן את רשומת החניך
+                await gSnap.docs[0].ref.collection('roster').doc(user.uid).set({ 
+                    name, 
+                    idNum, 
+                    uid: user.uid,
+                    lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            } else {
+                alert("קוד קבוצה לא נמצא");
+                return;
             }
         }
 
@@ -155,26 +168,45 @@
     async function loadProfileData() {
         const user = auth.currentUser;
         const saved = JSON.parse(localStorage.getItem('mda_user'));
-        if(!saved.groupId) return;
-        const doc = await db.collection('groups_v2').doc(saved.groupId).collection('roster').doc(user.uid).get();
-        if(doc.exists) {
-            const data = doc.data();
-            document.getElementById('p-email').value = data.email || "";
-            document.getElementById('p-phone').value = data.phone || "";
-        }
+        if(!user || !saved.groupId) return;
+        
+        try {
+            const doc = await db.collection('groups_v2').doc(saved.groupId).collection('roster').doc(user.uid).get();
+            if(doc.exists) {
+                const data = doc.data();
+                document.getElementById('p-email').value = data.email || "";
+                document.getElementById('p-phone').value = data.phone || "";
+            }
+        } catch(e) { console.error("Error loading profile:", e); }
     }
 
     async function saveProfile() {
         const user = auth.currentUser;
         const saved = JSON.parse(localStorage.getItem('mda_user'));
+        const btn = document.getElementById('btn-save-profile');
+
+        if(!user || !saved.groupId) return alert("אנא התחבר מחדש");
+
+        btn.disabled = true;
+        btn.innerText = "שומר...";
+
         try {
-            await db.collection('groups_v2').doc(saved.groupId).collection('roster').doc(user.uid).update({
+            // תיקון קריטי: שימוש ב-set עם merge במקום update
+            await db.collection('groups_v2').doc(saved.groupId).collection('roster').doc(user.uid).set({
                 email: document.getElementById('p-email').value.trim(),
-                phone: document.getElementById('p-phone').value.trim()
-            });
-            alert("עודכן בהצלחה");
+                phone: document.getElementById('p-phone').value.trim(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            
+            alert("הפרטים עודכנו בהצלחה!");
             toggleProfile(false);
-        } catch(e) { alert("שגיאה בעדכון"); }
+        } catch(e) { 
+            console.error(e);
+            alert("שגיאה בעדכון: " + e.message); 
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "שמור שינויים";
+        }
     }
 
     function startListener(gid) {
@@ -183,10 +215,10 @@
             .where('isOpen', '==', true).onSnapshot(s => {
                 const ui = document.getElementById('active-ui');
                 const label = document.getElementById('meeting-status');
-                if(s.empty) { label.innerText = "אין מפגש פעיל כרגע"; ui.classList.add('hidden'); }
+                if(s.empty) { label.innerText = "אין מפגש פתוח לדיווח"; ui.classList.add('hidden'); }
                 else {
                     window.curM = { id: s.docs[0].id, ref: s.docs[0].ref, ...s.docs[0].data() };
-                    label.innerHTML = `<span style="color:var(--mda-red)">●</span> מפגש פתוח לדיווח`;
+                    label.innerHTML = `<span style="color:var(--mda-red)">●</span> מפגש פתוח`;
                     ui.classList.remove('hidden');
                 }
             });
@@ -196,38 +228,54 @@
         const user = auth.currentUser;
         const savedData = JSON.parse(localStorage.getItem('mda_user'));
         const btn = document.getElementById('btn-report');
-        btn.disabled = true;
+        if(!window.curM) return;
 
+        btn.disabled = true;
         navigator.geolocation.getCurrentPosition(async p => {
             try {
                 await window.curM.ref.collection('attendance').doc(user.uid).set({
-                    name: savedData.name, idNum: savedData.idNum,
+                    name: savedData.name, 
+                    idNum: savedData.idNum,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                     location: new firebase.firestore.GeoPoint(p.coords.latitude, p.coords.longitude)
                 });
-                confetti(); alert("נוכחותך נרשמה בהצלחה!");
+                confetti(); alert("דיווחת נוכחות בהצלחה!");
                 loadHistory(savedData);
-            } catch(e) { alert("שגיאה בדיווח"); }
+            } catch(e) { alert("שגיאה בדיווח: המפגש כנראה נסגר"); }
             finally { btn.disabled = false; }
-        }, () => { alert("חובה לאשר GPS"); btn.disabled = false; });
+        }, () => { alert("יש לאשר גישת GPS כדי לדווח"); btn.disabled = false; });
     }
 
     async function loadHistory(user) {
         const container = document.getElementById('st-history');
-        const mSnap = await db.collection('groups_v2').doc(user.groupId).collection('meetings').orderBy('number', 'desc').get();
-        const results = await Promise.all(mSnap.docs.map(m => m.ref.collection('attendance').doc(auth.currentUser.uid).get()));
-        
-        let html = "";
-        results.forEach((att, i) => {
-            html += `<div class="history-item">
-                <span style="font-weight:700;">מפגש ${mSnap.docs[i].data().number || (i+1)}</span>
-                <span class="badge ${att.exists ? 'badge-present' : 'badge-absent'}">${att.exists ? 'נוכח' : 'חיסור'}</span>
-            </div>`;
-        });
-        container.innerHTML = html || "אין היסטוריה להצגה";
+        try {
+            const mSnap = await db.collection('groups_v2').doc(user.groupId).collection('meetings').orderBy('number', 'desc').limit(10).get();
+            const results = await Promise.all(mSnap.docs.map(m => m.ref.collection('attendance').doc(auth.currentUser.uid).get()));
+            
+            let html = "";
+            results.forEach((att, i) => {
+                html += `<div class="history-item">
+                    <span style="font-weight:700;">מפגש ${mSnap.docs[i].data().number || (i+1)}</span>
+                    <span class="badge ${att.exists ? 'badge-present' : 'badge-absent'}">${att.exists ? 'נוכח' : 'חיסור'}</span>
+                </div>`;
+            });
+            container.innerHTML = html || "אין היסטוריה להצגה";
+        } catch(e) { container.innerHTML = "שגיאה בטעינת היסטוריה"; }
     }
 
     function logout() { localStorage.clear(); location.reload(); }
+
+    // טעינה אוטומטית אם כבר מחובר
+    window.onload = () => {
+        const saved = localStorage.getItem('mda_user');
+        if(saved) {
+            const parsed = JSON.parse(saved);
+            // מחכה לוודא שה-Auth התחבר אנונימית
+            auth.onAuthStateChanged(user => {
+                if(user) showDashboard(parsed);
+            });
+        }
+    };
 </script>
 </body>
 </html>
