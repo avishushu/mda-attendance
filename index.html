@@ -12,224 +12,282 @@
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
-        :root { 
-            --primary: #e31e24; --secondary: #1a252f; --bg: #f0f2f5; 
-            --success: #27ae60; --warning: #f39c12; --danger: #c0392b; --info: #3498db; 
-        }
+        :root { --primary: #e31e24; --secondary: #1a252f; --bg: #f0f2f5; --success: #27ae60; --danger: #c0392b; }
         * { box-sizing: border-box; font-family: 'Heebo', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background: var(--bg); margin: 0; padding: 10px; display: flex; justify-content: center; min-height: 100vh; }
-        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 550px; text-align: right; position: relative; }
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: right; }
         .hidden { display: none; }
-        input, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; }
+        
+        /* UI Elements */
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; }
         button { width: 100%; padding: 14px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; color: white; background: var(--primary); margin-top: 10px; transition: 0.2s; }
         button:active { transform: scale(0.98); }
-        .item-card { background: #f8f9fa; border: 1px solid #eee; padding: 15px; border-radius: 15px; margin-bottom: 15px; border-right: 5px solid var(--primary); }
-        .profile-card { background: var(--secondary); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; }
-        .stat-box { display: flex; justify-content: space-around; text-align: center; margin-top: 10px; }
-        .stat-item { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; flex: 1; margin: 0 5px; }
-        .stat-num { font-size: 22px; font-weight: bold; display: block; }
-        .stat-label { font-size: 11px; opacity: 0.8; }
+        .item-card { background: #f8f9fa; border: 1px solid #eee; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-right: 5px solid var(--primary); }
+        
+        /* Dashboard */
+        .profile-header { background: var(--secondary); color: white; padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: center; }
+        .stat-circle { width: 70px; height: 70px; border: 4px solid var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 10px auto; font-size: 18px; font-weight: bold; }
+        
         .status-badge { padding: 3px 8px; border-radius: 5px; font-size: 11px; color: white; }
         .bg-green { background: var(--success); }
         .bg-red { background: var(--danger); }
         .bg-gray { background: #95a5a6; }
-        .lock-overlay { background: #fff5f5; border: 1px dashed var(--danger); padding: 15px; border-radius: 10px; text-align: center; color: var(--danger); margin: 10px 0; }
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 90%; max-width: 400px; }
-        .tab-btn { background: #eee; color: #666; width: 31%; font-size: 13px; display: inline-block; }
-        .tab-active { background: var(--secondary); color: white; }
     </style>
 </head>
 <body>
 
-<div class="card" id="app-container">
-    
-    <div id="auth-section">
+<div class="card" id="app">
+    <div id="setup-panel" class="hidden" style="background:#fff3cd; padding:10px; border-radius:10px; margin-bottom:15px; text-align:center;">
+        <p style="font-size:12px; margin:0;">נראה שזו הפעלה ראשונה. צור קבוצה כדי להתחיל:</p>
+        <button onclick="createInitialGroup()" style="background:#856404; padding:5px; font-size:11px;">צור קבוצה: TEST100</button>
+    </div>
+
+    <div id="login-section">
         <div style="text-align:center; margin-bottom:20px;">
             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Magen_David_Adom_Logo.svg/1200px-Magen_David_Adom_Logo.svg.png" style="max-width:70px;">
         </div>
-        <h2 style="text-align:center;">כניסה למערכת</h2>
-        <div id="student-login-form">
-            <div id="invite-msg" class="hidden" style="color:var(--success); text-align:center; font-weight:bold; margin-bottom:10px;">הוזמנת לקורס! הירשם למטה:</div>
-            <input type="text" id="reg-name" placeholder="שם מלא">
-            <input type="number" id="reg-id" placeholder="תעודת זהות">
-            <input type="text" id="reg-code" placeholder="קוד קבוצה">
-            <button onclick="handleStudentAuth()">כניסה / רישום ראשוני</button>
-            <button onclick="toggleInstructorUI()" style="background:none; color:gray; font-size:12px;">כניסת סגל (מדריך)</button>
+        <div id="student-login">
+            <h3 style="text-align:center;">כניסת חניך</h3>
+            <div id="invite-msg" class="hidden" style="color:var(--success); text-align:center; font-size:14px; margin-bottom:10px;">זיהינו הזמנה לקבוצה!</div>
+            <input type="text" id="st-name" placeholder="שם מלא">
+            <input type="number" id="st-id" placeholder="תעודת זהות">
+            <input type="text" id="st-code" placeholder="קוד קבוצה">
+            <button onclick="authStudent()">כניסה למערכת</button>
+            <button onclick="toggleView('admin-login')" style="background:none; color:gray; font-size:12px;">כניסת מנהל/מדריך</button>
         </div>
-        <div id="instructor-login-form" class="hidden">
-            <input type="email" id="ins-email" placeholder="אימייל מדריך">
-            <input type="password" id="ins-pass" placeholder="סיסמה">
-            <button onclick="instructorLogin()">כניסת מדריך</button>
-            <button onclick="toggleInstructorUI()" style="background:gray;">חזור</button>
+
+        <div id="admin-login" class="hidden">
+            <h3 style="text-align:center;">כניסת מנהל</h3>
+            <input type="email" id="adm-email" placeholder="אימייל">
+            <input type="password" id="adm-pass" placeholder="סיסמה">
+            <button onclick="authAdmin()" style="background:var(--secondary);">התחבר כמנהל</button>
+            <button onclick="toggleView('student-login')" style="background:none; color:gray; font-size:12px;">חזור לכניסת חניך</button>
         </div>
     </div>
 
-    <div id="student-main" class="hidden">
-        <div class="profile-card">
-            <h3 style="margin:0;">שלום, <span id="st-display-name"></span></h3>
-            <div class="stat-box">
-                <div class="stat-item"><span class="stat-num" id="st-stat-presence">0%</span><span class="stat-label">נוכחות</span></div>
-                <div class="stat-item"><span class="stat-num" id="st-stat-lates">0</span><span class="stat-label">איחורים</span></div>
-            </div>
+    <div id="student-dashboard" class="hidden">
+        <div class="profile-header">
+            <h2 id="display-user-name" style="margin:0;"></h2>
+            <p id="display-group-name" style="margin:5px 0; opacity:0.8; font-size:14px;"></p>
+            <div class="stat-circle" id="display-presence">0%</div>
+            <span style="font-size:12px;">נוכחות כוללת</span>
         </div>
-        <div id="checkin-section">
-            <h4>דיווח נוכחות:</h4>
-            <div id="meeting-area" class="item-card">
-                <p id="meeting-status">מחפש מפגש פעיל...</p>
-                <div id="active-ui" class="hidden">
-                    <div id="profile-lock" class="lock-overlay hidden">
-                        <strong>🔒 הדיווח חסום</strong><br>
-                        עליך להשלים טלפון ועיר מגורים בפרופיל.
-                        <button onclick="showProfileModal()" style="background:var(--danger); padding:5px; font-size:12px; margin-top:5px;">השלם פרטים</button>
-                    </div>
-                    <button id="btn-gps" onclick="doCheckIn()" style="background:var(--success); height:80px; font-size:20px; border-radius:40px;">סמן נוכחות (GPS)</button>
-                </div>
-            </div>
+
+        <div id="active-meeting-box" class="item-card">
+            <p id="meeting-status" style="font-weight:bold; margin:0;">מחפש מפגש פעיל...</p>
+            <button id="gps-button" class="hidden" onclick="submitAttendance()" style="background:var(--success); height:80px; font-size:20px; border-radius:40px; margin-top:10px;">סמן נוכחות (GPS)</button>
         </div>
+
         <h4>היסטוריית מפגשים:</h4>
-        <div id="st-history"></div>
+        <div id="history-list"></div>
         <button onclick="logout()" style="background:none; color:red; font-size:12px; text-decoration:underline; width:100%;">התנתק מהמכשיר</button>
     </div>
 
-    <div id="instructor-main" class="hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3>ניהול קורסים</h3>
+    <div id="admin-panel" class="hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:10px;">
+            <h3>לוח בקרה מדריך</h3>
             <button onclick="logout()" style="width:auto; padding:5px 10px; background:gray; font-size:11px;">צא</button>
         </div>
-        <div id="groups-list"></div>
-        <div id="single-group-view" class="hidden">
-            <button onclick="backToGroups()" style="background:none; color:black; text-decoration:underline; width:auto; padding:0;">← חזור</button>
-            <h3 id="view-group-name"></h3>
-            <div id="ins-meetings-list"></div>
+        
+        <div class="item-card" style="margin-top:15px;">
+            <h4>ניהול מפגש נוכחי</h4>
+            <input type="number" id="new-meeting-num" placeholder="מספר מפגש (למשל: 1)">
+            <button id="btn-toggle-meeting" onclick="handleMeetingToggle()" style="background:var(--success);">פתח רישום נוכחות</button>
         </div>
-    </div>
-</div>
 
-<div id="modal-profile" class="modal hidden">
-    <div class="modal-content">
-        <h3>השלמת פרטים אישיים</h3>
-        <input type="tel" id="p-phone" placeholder="מספר טלפון">
-        <input type="text" id="p-city" placeholder="עיר מגורים">
-        <label><input type="checkbox" id="p-terms"> אני מאשר את תקנון הקורס</label>
-        <button onclick="submitProfile()" style="background:var(--success)">שמור ופתח חסימה</button>
-        <button onclick="hideProfileModal()" style="background:gray;">ביטול</button>
+        <h4>נוכחות בזמן אמת:</h4>
+        <div id="live-attendance-list"></div>
     </div>
 </div>
 
 <script>
-    // --- הקונפיגורציה שלך ---
+    // Firebase Config (מבוסס על הנתונים שלך)
     const firebaseConfig = {
       apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE",
       authDomain: "attendancemda.firebaseapp.com",
       projectId: "attendancemda",
       storageBucket: "attendancemda.firebasestorage.app",
       messagingSenderId: "303165146059",
-      appId: "1:303165146059:web:606d5d5ece96d9fe702c4e",
-      measurementId: "G-BFR9WTDWE4"
+      appId: "1:303165146059:web:606d5d5ece96d9fe702c4e"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
 
-    let userData = JSON.parse(localStorage.getItem('mda_user')) || null;
     const urlParams = new URLSearchParams(window.location.search);
-    const invite = urlParams.get('join');
+    const joinCode = urlParams.get('join');
 
-    window.onload = () => {
-        if(invite) {
-            document.getElementById('reg-code').value = invite;
-            document.getElementById('reg-code').classList.add('hidden');
+    window.onload = async () => {
+        // בדיקת הזמנה
+        if(joinCode) {
+            document.getElementById('st-code').value = joinCode;
+            document.getElementById('st-code').classList.add('hidden');
             document.getElementById('invite-msg').classList.remove('hidden');
         }
-        if(userData) loginStudent(userData);
+        
+        // בדיקת מערכת ריקה
+        const snap = await db.collection('groups_v2').limit(1).get();
+        if(snap.empty) document.getElementById('setup-panel').classList.remove('hidden');
+
+        // בדיקת לוגין קיים
+        const saved = localStorage.getItem('mda_user');
+        if(saved) initStudentUI(JSON.parse(saved));
+        
+        auth.onAuthStateChanged(user => { if(user) initAdminUI(); });
     };
 
-    function toggleInstructorUI() {
-        document.getElementById('student-login-form').classList.toggle('hidden');
-        document.getElementById('instructor-login-form').classList.toggle('hidden');
+    // --- לוגיקת משתמשים ---
+    function toggleView(id) {
+        document.getElementById('student-login').classList.add('hidden');
+        document.getElementById('admin-login').classList.add('hidden');
+        document.getElementById(id).classList.remove('hidden');
     }
 
-    async function handleStudentAuth() {
-        const name = document.getElementById('reg-name').value;
-        const idNum = document.getElementById('reg-id').value;
-        const code = document.getElementById('reg-code').value;
-        if(!name || !idNum || !code) return alert("מלא הכל");
+    async function authStudent() {
+        const name = document.getElementById('st-name').value;
+        const idNum = document.getElementById('st-id').value;
+        const code = document.getElementById('st-code').value;
+
+        if(!name || !idNum || !code) return alert("מלא את כל השדות");
+
         const gSnap = await db.collection('groups_v2').where('code', '==', code).get();
-        if(gSnap.empty) return alert("קוד שגוי");
+        if(gSnap.empty) return alert("קוד קבוצה לא נמצא");
+
         const group = gSnap.docs[0];
-        const userObj = { name, idNum, groupId: group.id, groupName: group.data().name };
-        await group.ref.collection('roster').doc(idNum).set({ name, idNum, lastEntry: new Date() }, {merge: true});
-        localStorage.setItem('mda_user', JSON.stringify(userObj));
-        loginStudent(userObj);
-    }
-
-    async function loginStudent(user) {
-        userData = user;
-        document.getElementById('auth-section').classList.add('hidden');
-        document.getElementById('student-main').classList.remove('hidden');
-        document.getElementById('st-display-name').innerText = user.name;
+        const user = { name, idNum, groupId: group.id, groupName: group.data().name };
         
-        const doc = await db.collection('groups_v2').doc(user.groupId).collection('roster').doc(user.idNum).get();
-        const data = doc.data();
-        const isLocked = !data || !data.phone;
-        document.getElementById('profile-lock').classList.toggle('hidden', !isLocked);
-        document.getElementById('btn-gps').classList.toggle('hidden', isLocked);
-
-        loadStudentHistory();
-        listenMeetings(user.groupId);
+        await group.ref.collection('roster').doc(idNum).set({ name, idNum, lastLogin: new Date() }, {merge:true});
+        localStorage.setItem('mda_user', JSON.stringify(user));
+        initStudentUI(user);
     }
 
-    function listenMeetings(gid) {
-        db.collection('groups_v2').doc(gid).collection('meetings').where('isOpen', '==', true).onSnapshot(s => {
-            const ui = document.getElementById('active-ui');
-            if(s.empty) { document.getElementById('meeting-status').innerText = "אין מפגש פעיל"; ui.classList.add('hidden'); }
-            else { 
-                window.curM = { id: s.docs[0].id, ref: s.docs[0].ref, ...s.docs[0].data() };
-                document.getElementById('meeting-status').innerText = "מפגש #" + window.curM.number + " פתוח!";
-                ui.classList.remove('hidden');
+    async function authAdmin() {
+        const email = document.getElementById('adm-email').value;
+        const pass = document.getElementById('adm-pass').value;
+        try {
+            await auth.signInWithEmailAndPassword(email, pass);
+        } catch(e) { alert("פרטי מנהל שגויים"); }
+    }
+
+    // --- ממשק חניך ---
+    async function initStudentUI(user) {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('student-dashboard').classList.remove('hidden');
+        document.getElementById('display-user-name').innerText = user.name;
+        document.getElementById('display-group-name').innerText = user.groupName;
+
+        loadStudentStats(user);
+
+        // האזנה למפגש פעיל
+        db.collection('groups_v2').doc(user.groupId).collection('meetings').doc('active').onSnapshot(doc => {
+            const btn = document.getElementById('gps-button');
+            const status = document.getElementById('meeting-status');
+            if(doc.exists && doc.data().isOpen) {
+                window.activeMeeting = doc.ref;
+                status.innerText = "מפגש #" + doc.data().number + " פתוח לרישום!";
+                btn.classList.remove('hidden');
+            } else {
+                status.innerText = "אין מפגש פעיל כרגע";
+                btn.classList.add('hidden');
             }
         });
     }
 
-    async function doCheckIn() {
-        navigator.geolocation.getCurrentPosition(async p => {
-            const now = new Date();
-            await window.curM.ref.collection('attendance').doc(userData.idNum).set({
-                name: userData.name, idNum: userData.idNum, time: now.toLocaleTimeString('he-IL'),
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            confetti(); alert("נוכחות סומנה!"); location.reload();
-        }, () => alert("חובה לאשר GPS"));
-    }
-
-    async function submitProfile() {
-        const phone = document.getElementById('p-phone').value;
-        const city = document.getElementById('p-city').value;
-        if(!phone || !city || !document.getElementById('p-terms').checked) return alert("מלא הכל");
-        await db.collection('groups_v2').doc(userData.groupId).collection('roster').doc(userData.idNum).update({ phone, city });
-        hideProfileModal();
-        loginStudent(userData);
-    }
-
-    function showProfileModal() { document.getElementById('modal-profile').classList.remove('hidden'); }
-    function hideProfileModal() { document.getElementById('modal-profile').classList.add('hidden'); }
-    function logout() { localStorage.removeItem('mda_user'); location.reload(); }
-
-    async function loadStudentHistory() {
-        const mSnap = await db.collection('groups_v2').doc(userData.groupId).collection('meetings').get();
-        const container = document.getElementById('st-history');
+    async function loadStudentStats(user) {
+        const mSnap = await db.collection('groups_v2').doc(user.groupId).collection('meetings').get();
+        const container = document.getElementById('history-list');
         container.innerHTML = "";
-        let count = 0;
+        let presentCount = 0;
+
         for(const mDoc of mSnap.docs) {
-            const att = await mDoc.ref.collection('attendance').doc(userData.idNum).get();
-            let b = att.exists ? '<span class="status-badge bg-green">נוכח</span>' : '<span class="status-badge bg-red">חיסור</span>';
-            if (att.exists) count++;
-            container.innerHTML += `<div class="item-card" style="display:flex; justify-content:space-between;"><span>מפגש ${mDoc.data().number}</span> ${b}</div>`;
+            if(mDoc.id === 'active') continue;
+            const att = await mDoc.ref.collection('attendance').doc(user.idNum).get();
+            const isPresent = att.exists;
+            if(isPresent) presentCount++;
+            
+            container.innerHTML += `<div class="item-card" style="display:flex; justify-content:space-between; align-items:center; padding:10px;">
+                <span>מפגש ${mDoc.data().number}</span>
+                <span class="status-badge ${isPresent ? 'bg-green' : 'bg-red'}">${isPresent ? 'נוכח' : 'חיסור'}</span>
+            </div>`;
         }
-        document.getElementById('st-stat-presence').innerText = mSnap.size ? Math.round((count/mSnap.size)*100)+"%" : "0%";
+        const total = mSnap.docs.filter(d => d.id !== 'active').length;
+        document.getElementById('display-presence').innerText = total > 0 ? Math.round((presentCount/total)*100) + "%" : "100%";
     }
+
+    async function submitAttendance() {
+        navigator.geolocation.getCurrentPosition(async pos => {
+            const user = JSON.parse(localStorage.getItem('mda_user'));
+            await window.activeMeeting.collection('attendance').doc(user.idNum).set({
+                name: user.name, idNum: user.idNum, timestamp: new Date()
+            });
+            confetti(); alert("הנוכחות נקלטה!");
+        }, () => alert("חובה לאשר GPS לדיווח נוכחות"));
+    }
+
+    // --- ממשק מנהל ---
+    async function initAdminUI() {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('admin-panel').classList.remove('hidden');
+        
+        const gSnap = await db.collection('groups_v2').limit(1).get();
+        window.currentGroupRef = gSnap.docs[0].ref;
+
+        window.currentGroupRef.collection('meetings').doc('active').onSnapshot(doc => {
+            const btn = document.getElementById('btn-toggle-meeting');
+            if(doc.exists && doc.data().isOpen) {
+                window.isMeetingLive = true;
+                btn.innerText = "סגור רישום ושמור מפגש";
+                btn.style.background = "var(--danger)";
+                listenToLiveAttendance();
+            } else {
+                window.isMeetingLive = false;
+                btn.innerText = "פתח רישום נוכחות";
+                btn.style.background = "var(--success)";
+            }
+        });
+    }
+
+    async function handleMeetingToggle() {
+        const num = document.getElementById('new-meeting-num').value;
+        if(!num) return alert("הכנס מספר מפגש");
+
+        if(!window.isMeetingLive) {
+            await window.currentGroupRef.collection('meetings').doc('active').set({ number: num, isOpen: true });
+        } else {
+            // סגירה ושמירה כהיסטוריה
+            const snap = await window.currentGroupRef.collection('meetings').doc('active').collection('attendance').get();
+            const meetingDoc = await window.currentGroupRef.collection('meetings').add({ number: num, date: new Date().toLocaleDateString() });
+            
+            // העברת הנוכחות
+            for(const doc of snap.docs) {
+                await meetingDoc.collection('attendance').doc(doc.id).set(doc.data());
+                await doc.ref.delete();
+            }
+            await window.currentGroupRef.collection('meetings').doc('active').delete();
+            document.getElementById('live-attendance-list').innerHTML = "";
+            alert("המפגש נסגר ונשמר בהיסטוריה");
+        }
+    }
+
+    function listenToLiveAttendance() {
+        window.currentGroupRef.collection('meetings').doc('active').collection('attendance').onSnapshot(snap => {
+            const list = document.getElementById('live-attendance-list');
+            list.innerHTML = "";
+            snap.forEach(doc => {
+                list.innerHTML += `<div class="item-card" style="padding:8px;">${doc.data().name} (${doc.data().idNum})</div>`;
+            });
+        });
+    }
+
+    // --- עזרים ---
+    async function createInitialGroup() {
+        await db.collection('groups_v2').add({ name: "קורס חובשים מתקדם", code: "TEST100" });
+        alert("קבוצה TEST100 נוצרה!");
+        location.reload();
+    }
+
+    function logout() { auth.signOut(); localStorage.clear(); location.reload(); }
 </script>
 </body>
 </html>
