@@ -1,94 +1,191 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="he">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>נוכחות קורס חובשים</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .mda-red { background-color: #D32F2F; }
-        .mda-black { background-color: #1A1A1A; }
-    </style>
+  <meta charset="UTF-8">
+  <title>Attendance App</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0b0f1a;
+      color: white;
+      text-align: center;
+    }
+
+    input, button {
+      margin: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    button {
+      background: #1e90ff;
+      color: white;
+      cursor: pointer;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body>
 
-    <header class="mda-black text-white p-6 text-center shadow-lg">
-        <h1 class="text-2xl font-bold">נוכחות קורס חובשים</h1>
-        <button onclick="switchRole()" class="text-red-500 text-sm mt-2 underline">החלף תצוגה (מדריך/תלמיד)</button>
-    </header>
+<h1>מערכת נוכחות</h1>
 
-    <main class="p-4 max-w-md mx-auto">
-        <div id="student-view" class="bg-white rounded-xl shadow-md p-6 border-t-4 border-red-600">
-            <h2 class="text-xl font-bold mb-2">מפגש מס' 14 - החייאה</h2>
-            <p class="text-gray-600 mb-6">סטטוס: פתוח לרישום</p>
-            
-            <button id="checkin-btn" onclick="handleCheckIn()" class="w-full mda-black text-white py-4 rounded-lg font-bold text-lg active:scale-95 transition-transform">
-                אני בשיעור
-            </button>
-            <p id="status-msg" class="mt-4 text-center font-bold hidden"></p>
-        </div>
+<div id="auth">
+  <h2>התחברות</h2>
+  <input id="email" placeholder="Email"><br>
+  <input id="password" type="password" placeholder="Password"><br>
+  <button onclick="login()">Login</button>
+  <button onclick="register()">Register</button>
+</div>
 
-        <div id="instructor-view" class="hidden space-y-4">
-            <div class="bg-white rounded-xl shadow-md p-6 border-t-4 border-red-600">
-                <h2 class="text-xl font-bold mb-4">ניהול מדריך</h2>
-                <button class="w-full mda-red text-white py-3 rounded-lg font-bold">פתח רישום נוכחות</button>
-            </div>
-            
-            <h3 class="font-bold text-lg mt-6">נוכחות בכיתה בזמן אמת:</h3>
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="flex justify-between items-center p-4 border-b">
-                    <span>ישראל ישראלי</span>
-                    <span class="bg-green-600 text-white px-3 py-1 rounded text-sm">בזמן</span>
-                </div>
-                <div class="flex justify-between items-center p-4 border-b">
-                    <span>יוסי כהן</span>
-                    <span class="bg-yellow-500 text-white px-3 py-1 rounded text-sm">איחור (5 דק')</span>
-                </div>
-                <div class="flex justify-between items-center p-4">
-                    <span>אבי לוי</span>
-                    <span class="bg-gray-800 text-white px-3 py-1 rounded text-sm">טרם הגיע</span>
-                </div>
-            </div>
-        </div>
-    </main>
+<div id="dashboard" class="hidden">
+  <h2 id="welcome"></h2>
+  <button onclick="createGroup()">צור קבוצה</button>
+  <button onclick="joinGroup()">הצטרף לקבוצה</button>
+  <button onclick="openSession()">פתח מפגש</button>
+  <button onclick="markAttendance()">אני בשיעור</button>
+  <button onclick="logout()">התנתק</button>
+</div>
 
-    <script>
-        let isStudent = true;
-        // מיקום דמה של המדריך
-        const instLoc = { lat: 32.0853, lng: 34.7818 };
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
-        function switchRole() {
-            isStudent = !isStudent;
-            document.getElementById('student-view').classList.toggle('hidden', !isStudent);
-            document.getElementById('instructor-view').classList.toggle('hidden', isStudent);
-        }
+const firebaseConfig = {
+  apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE",
+  authDomain: "attendancemda.firebaseapp.com",
+  projectId: "attendancemda",
+  storageBucket: "attendancemda.firebasestorage.app",
+  messagingSenderId: "303165146059",
+  appId: "1:303165146059:web:cf698f5837c0ee96702c4e",
+};
 
-        function handleCheckIn() {
-            const btn = document.getElementById('checkin-btn');
-            const msg = document.getElementById('status-msg');
-            
-            btn.innerText = "בודק מיקום...";
-            btn.disabled = true;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getFirestore();
 
-            if (!navigator.geolocation) {
-                alert("הדפדפן שלך לא תומך במיקום");
-                return;
-            }
+// ===== AUTH =====
 
-            navigator.geolocation.getCurrentPosition((pos) => {
-                const dist = 0; // לצורך הבדיקה בדפדפן נניח שהמיקום תקין
-                
-                btn.style.backgroundColor = "#388E3C";
-                btn.innerText = "נרשמת בהצלחה!";
-                msg.innerText = "הנוכחות נקלטה במיקום תקין";
-                msg.classList.remove('hidden');
-                msg.classList.add('text-green-600');
-            }, (err) => {
-                btn.disabled = false;
-                btn.innerText = "אני בשיעור";
-                alert("חובה לאשר הרשאת מיקום בדפדפן");
-            });
-        }
-    </script>
+window.register = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const userCred = await createUserWithEmailAndPassword(auth, email, password);
+
+  await setDoc(doc(db, "users", userCred.user.uid), {
+    email,
+    role: "student"
+  });
+
+  alert("נרשמת בהצלחה");
+};
+
+window.login = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  const userCred = await signInWithEmailAndPassword(auth, email, password);
+
+  document.getElementById("auth").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+  document.getElementById("welcome").innerText = "שלום " + email;
+};
+
+window.logout = async () => {
+  await signOut(auth);
+  location.reload();
+};
+
+// ===== GROUP =====
+
+window.createGroup = async () => {
+  const name = prompt("שם קבוצה:");
+  const user = auth.currentUser;
+
+  await setDoc(doc(db, "groups", name), {
+    name,
+    instructor: user.uid
+  });
+
+  alert("קבוצה נוצרה");
+};
+
+window.joinGroup = async () => {
+  const name = prompt("שם קבוצה:");
+  const user = auth.currentUser;
+
+  await setDoc(doc(db, "groups", name + "_student_" + user.uid), {
+    group: name,
+    user: user.uid
+  });
+
+  alert("נשלחה בקשת הצטרפות");
+};
+
+// ===== SESSION =====
+
+window.openSession = () => {
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude, longitude } = pos.coords;
+
+    await setDoc(doc(db, "session", "active"), {
+      lat: latitude,
+      lng: longitude,
+      open: true
+    });
+
+    alert("מפגש נפתח");
+  }, () => {
+    alert("אין גישה למיקום");
+  });
+};
+
+// ===== ATTENDANCE =====
+
+window.markAttendance = () => {
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+
+    const sessionSnap = await getDoc(doc(db, "session", "active"));
+    const session = sessionSnap.data();
+
+    const distance = getDistance(
+      pos.coords.latitude,
+      pos.coords.longitude,
+      session.lat,
+      session.lng
+    );
+
+    if (distance <= 0.07) {
+      alert("נוכחות נקלטה ✅");
+    } else {
+      alert("אתה מחוץ לטווח ❌");
+    }
+
+  }, () => {
+    alert("אין GPS");
+  });
+};
+
+// ===== DISTANCE =====
+
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+}
+</script>
+
 </body>
 </html>
