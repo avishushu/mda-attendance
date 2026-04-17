@@ -1,233 +1,367 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<title>Attendance MVP</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת נוכחות - מד"א</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* === הגדרות צבעים ועיצוב גלובלי === */
+        :root {
+            --primary-red: #d32f2f;
+            --dark-blue: #1a237e;
+            --black: #212121;
+            --light-gray: #f5f5f5;
+            --white: #ffffff;
+            --success-green: #2e7d32;
+            --warning-orange: #ed6c02;
+        }
 
-<style>
-body{
-  font-family:Arial;
-  background:#0b1220;
-  color:white;
-  text-align:center;
-  margin:0;
-}
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Heebo', sans-serif;
+        }
 
-.screen{display:none;padding:20px}
-.active{display:block}
+        body {
+            background-color: var(--light-gray);
+            color: var(--black);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
 
-.card{
-  background:#111a2e;
-  padding:15px;
-  margin:10px;
-  border-radius:10px;
-}
+        /* === רכיבי UI === */
+        header {
+            background-color: var(--dark-blue);
+            color: var(--white);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
 
-input,button,select{
-  padding:10px;
-  margin:5px;
-  border-radius:8px;
-  border:none;
-}
+        .header-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
 
-button{background:#2563eb;color:white}
+        .settings-btn, .logout-btn {
+            background: none;
+            border: none;
+            color: var(--white);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+        }
 
-.tag{padding:5px 10px;border-radius:6px}
-.on{background:#16a34a}
-.late{background:#f97316}
-</style>
+        main {
+            flex: 1;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: var(--dark-blue);
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--primary-red);
+            padding-bottom: 5px;
+            display: inline-block;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: var(--primary-red);
+            color: var(--white);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #b71c1c;
+        }
+
+        button.secondary {
+            background-color: var(--dark-blue);
+        }
+
+        button.secondary:hover {
+            background-color: #121858;
+        }
+
+        button.success {
+            background-color: var(--success-green);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: var(--white);
+        }
+
+        .status-open { background-color: var(--success-green); }
+        .status-closed { background-color: var(--warning-orange); }
+
+        .text-center { text-align: center; }
+        .mt-10 { margin-top: 10px; }
+        .mb-10 { margin-bottom: 10px; }
+        
+        .link {
+            color: var(--dark-blue);
+            text-decoration: underline;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
-
 <body>
 
-<!-- LOGIN -->
-<div id="login" class="screen active">
-  <h2>כניסה</h2>
+    <header id="app-header" class="hidden">
+        <button class="settings-btn" id="btn-settings">⚙️</button>
+        <div class="header-title">מערכת נוכחות</div>
+        <button class="logout-btn" id="btn-logout">🚪</button>
+    </header>
 
-  <input id="email" placeholder="email"><br>
-  <input id="pass" type="password" placeholder="password"><br>
+    <main>
+        <section id="view-auth" class="card">
+            <div class="text-center mb-10">
+                <h2 id="auth-title">התחברות למערכת</h2>
+            </div>
+            
+            <form id="form-login">
+                <div class="form-group">
+                    <label>תעודת זהות (יומר למייל פנימי)</label>
+                    <input type="text" id="login-id" required placeholder="הזן תעודת זהות">
+                </div>
+                <div class="form-group">
+                    <label>סיסמה</label>
+                    <input type="password" id="login-password" required placeholder="הזן סיסמה">
+                </div>
+                <button type="submit">היכנס</button>
+                <div class="text-center mt-10">
+                    <span class="link" id="link-forgot-pass">שכחתי סיסמה</span> | 
+                    <span class="link" id="link-register">משתמש חדש? הירשם כאן</span>
+                </div>
+            </form>
 
-  <select id="role">
-    <option value="student">תלמיד</option>
-    <option value="instructor">מדריך</option>
-  </select><br>
+            <form id="form-register" class="hidden">
+                <div class="form-group">
+                    <label>שם מלא</label>
+                    <input type="text" id="reg-name" required placeholder="ישראל ישראלי">
+                </div>
+                <div class="form-group">
+                    <label>תעודת זהות</label>
+                    <input type="text" id="reg-id" required placeholder="מספר ת.ז">
+                </div>
+                <div class="form-group">
+                    <label>כתובת מייל</label>
+                    <input type="email" id="reg-email" required placeholder="דואר אלקטרוני">
+                </div>
+                <div class="form-group">
+                    <label>סיסמה</label>
+                    <input type="password" id="reg-password" required placeholder="בחר סיסמה">
+                </div>
+                <button type="submit" class="secondary">הרשם כתלמיד</button>
+                <div class="text-center mt-10">
+                    <span class="link" id="link-back-login">חזור להתחברות</span>
+                </div>
+            </form>
+        </section>
 
-  <button onclick="register()">הרשמה</button>
-  <button onclick="login()">כניסה</button>
-</div>
+        <section id="view-student" class="hidden">
+            <div class="card">
+                <h2>שלום, <span id="student-name">תלמיד</span></h2>
+                <p>הקורסים שלי:</p>
+                <div id="student-courses-list" class="mt-10">
+                    <div style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <strong>קורס חובשים 2026</strong><br>
+                        סטטוס: <span class="status-badge status-open">פתוח לרישום</span>
+                        <button class="success mt-10" id="btn-mark-attendance">אני בשיעור (דגום מיקום)</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>נתוני נוכחות אישיים</h2>
+                <p>נוכחות: 85% | איחורים: 2 | חיסורים: 0</p>
+            </div>
+        </section>
 
-<!-- APP -->
-<div id="app" class="screen">
+        <section id="view-instructor" class="hidden">
+            <div class="card">
+                <h2>ניהול קבוצות (מדריך)</h2>
+                <button class="secondary mb-10" id="btn-new-group">➕ פתח קבוצה חדשה</button>
+                <div id="instructor-groups-list">
+                    <div style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
+                        <strong>קורס חובשים 2026 (מפגש #4)</strong><br>
+                        <button class="mt-10" id="btn-open-attendance">פתח רישום נוכחות למפגש</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>חריגים ממתינים לאישור</h2>
+                <p style="font-size: 0.9rem; color: #666;">אין חריגים כרגע.</p>
+            </div>
+        </section>
 
-  <h3 id="info"></h3>
+        <section id="view-admin" class="hidden">
+            <div class="card">
+                <h2>דשבורד מנהל מערכת</h2>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="mb-10">
+                    <button class="secondary">ניהול משתמשים</button>
+                    <button class="secondary">ניהול קבוצות</button>
+                    <button class="secondary">לוג עריכות</button>
+                    <button class="secondary">סטטיסטיקות</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>כלל הקבוצות הפעילות</h2>
+                <p style="font-size: 0.9rem; color: #666;">טוען נתונים...</p>
+            </div>
+        </section>
 
-  <div class="card">
-    <h3>קבוצה</h3>
-    <input id="groupInput" placeholder="קוד קבוצה">
-    <button onclick="join()">הצטרף</button>
-    <button onclick="create()">צור קבוצה</button>
-    <div id="groupBox"></div>
-  </div>
+    </main>
 
-  <div class="card">
-    <h3>מפגש</h3>
-    <button onclick="openSession()">פתח מפגש</button>
-    <button onclick="mark()">אני בשיעור</button>
-  </div>
+    <script type="module">
+        // ייבוא מודולים מ-Firebase SDK v9
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-  <div class="card">
-    <h3>נוכחות</h3>
-    <div id="list"></div>
-  </div>
+        // פרטי ההתחברות שלך מ-Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE",
+            authDomain: "attendancemda.firebaseapp.com",
+            projectId: "attendancemda",
+            storageBucket: "attendancemda.firebasestorage.app",
+            messagingSenderId: "303165146059",
+            appId: "1:303165146059:web:cf698f5837c0ee96702c4e",
+            measurementId: "G-0L08HZXS3Z"
+        };
 
-</div>
+        // אתחול Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+        // === רפרנסים למסכים ב-DOM ===
+        const views = {
+            auth: document.getElementById('view-auth'),
+            student: document.getElementById('view-student'),
+            instructor: document.getElementById('view-instructor'),
+            admin: document.getElementById('view-admin')
+        };
+        const header = document.getElementById('app-header');
 
-const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT"
-};
+        // === פונקציית ניתוב (Routing) ===
+        function switchView(viewName) {
+            Object.values(views).forEach(view => view.classList.add('hidden'));
+            if (views[viewName]) {
+                views[viewName].classList.remove('hidden');
+                header.classList.remove('hidden');
+            } else {
+                views.auth.classList.remove('hidden');
+                header.classList.add('hidden');
+            }
+        }
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth();
-const db = getFirestore();
+        // === מאזין לשינוי מצב התחברות (Auth State) ===
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // המשתמש מחובר - כאן נשלוף מ-Firestore את סוג המשתמש (תלמיד/מדריך/מנהל)
+                // לצורך הדגמת המעטפת, נגדיר כרגע ניתוב לתלמיד ברירת מחדל
+                // בהמשך הלוגיקה תהיה: getDoc(doc(db, "users", user.uid)).then(...)
+                console.log("משתמש מחובר:", user.email);
+                switchView('student'); 
+            } else {
+                // המשתמש לא מחובר
+                switchView('auth');
+            }
+        });
 
-let user=null;
-let role=null;
-let group=null;
+        // === לוגיקת UI התחברות והרשמה ===
+        const formLogin = document.getElementById('form-login');
+        const formRegister = document.getElementById('form-register');
+        const authTitle = document.getElementById('auth-title');
 
-// ===== AUTH =====
+        document.getElementById('link-register').addEventListener('click', () => {
+            formLogin.classList.add('hidden');
+            formRegister.classList.remove('hidden');
+            authTitle.innerText = "הרשמת תלמיד חדש";
+        });
 
-window.register = async ()=>{
-  const u = await createUserWithEmailAndPassword(auth,email.value,pass.value);
+        document.getElementById('link-back-login').addEventListener('click', () => {
+            formRegister.classList.add('hidden');
+            formLogin.classList.remove('hidden');
+            authTitle.innerText = "התחברות למערכת";
+        });
 
-  await setDoc(doc(db,"users",u.user.uid),{
-    role:role.value,
-    email:email.value
-  });
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            signOut(auth);
+        });
 
-  alert("נרשמת");
-};
+        // === דגימת מיקום (Mocking ללוגיקת ה-GPS) ===
+        document.getElementById('btn-mark-attendance')?.addEventListener('click', () => {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        alert(`מיקום נדגם בהצלחה!\nקו רוחב: ${lat.toFixed(5)}\nקו אורך: ${lng.toFixed(5)}\nהנתונים ישלחו לאימות מול מיקום המדריך.`);
+                        // כאן תיכנס הלוגיקה שמחשבת מרחק ממיקום המדריך ב-Firestore
+                    },
+                    (error) => {
+                        alert("שגיאה בדגימת מיקום. אנא ודא ששירותי המיקום (GPS) דולקים ואישרת הרשאה לדפדפן.");
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                alert("הדפדפן שלך אינו תומך בשירותי מיקום.");
+            }
+        });
 
-window.login = async ()=>{
-  const r = await signInWithEmailAndPassword(auth,email.value,pass.value);
-
-  user = r.user;
-
-  const d = await getDoc(doc(db,"users",user.uid));
-  role = d.data().role;
-
-  switchScreen("app");
-  info.innerText = role;
-
-  listen();
-};
-
-// ===== NAV =====
-
-function switchScreen(id){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-}
-
-// ===== GROUP =====
-
-window.create = async ()=>{
-  group = Math.random().toString(36).substring(2,7);
-
-  await setDoc(doc(db,"groups",group),{
-    owner:user.uid
-  });
-
-  alert("קוד: "+group);
-};
-
-window.join = ()=>{
-  group = groupInput.value;
-  listen();
-};
-
-// ===== SESSION =====
-
-window.openSession = async ()=>{
-  navigator.geolocation.getCurrentPosition(async p=>{
-    if(!group) return alert("אין קבוצה");
-
-    await setDoc(doc(db,"sessions",group),{
-      lat:p.coords.latitude,
-      lng:p.coords.longitude,
-      start:Date.now()
-    });
-
-    alert("נפתח מפגש");
-  });
-};
-
-// ===== MARK =====
-
-window.mark = ()=>{
-  navigator.geolocation.getCurrentPosition(async p=>{
-    if(!group) return alert("אין קבוצה");
-
-    const s = await getDoc(doc(db,"sessions",group));
-
-    const d = distance(
-      p.coords.latitude,
-      p.coords.longitude,
-      s.data().lat,
-      s.data().lng
-    );
-
-    let status = d < 0.07 ? "on" : "late";
-
-    await addDoc(collection(db,"attendance"),{
-      user:user.uid,
-      group,
-      status,
-      time:Date.now()
-    });
-  });
-};
-
-// ===== REALTIME =====
-
-function listen(){
-  if(!group) return;
-
-  const q = query(collection(db,"attendance"), where("group","==",group));
-
-  onSnapshot(q, snap=>{
-    list.innerHTML="";
-
-    snap.forEach(d=>{
-      const a=d.data();
-
-      const div=document.createElement("div");
-      div.innerHTML = `<span class="tag ${a.status}">${a.status}</span> ${a.user}`;
-
-      list.appendChild(div);
-    });
-  });
-}
-
-// ===== UTIL =====
-
-function distance(a,b,c,d){
-  const R=6371;
-  const x=(c-a)*Math.PI/180;
-  const y=(d-b)*Math.PI/180;
-
-  const z=Math.sin(x/2)**2+
-  Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
-
-  return R*(2*Math.atan2(Math.sqrt(z),Math.sqrt(1-z)));
-}
-</script>
-
+    </script>
 </body>
-</html>
+  </html>
+      
