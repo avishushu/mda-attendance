@@ -172,8 +172,8 @@
             
             <form id="form-login">
                 <div class="form-group">
-                    <label>תעודת זהות (יומר למייל פנימי)</label>
-                    <input type="text" id="login-id" required placeholder="הזן תעודת זהות">
+                    <label>אימייל / תעודת זהות</label>
+                    <input type="text" id="login-id" required placeholder="הזן כתובת אימייל">
                 </div>
                 <div class="form-group">
                     <label>סיסמה</label>
@@ -224,7 +224,7 @@
             </div>
             <div class="card">
                 <h2>נתוני נוכחות אישיים</h2>
-                <p>נוכחות: 85% | איחורים: 2 | חיסורים: 0</p>
+                <p>נוכחות: 100% | איחורים: 0 | חיסורים: 0</p>
             </div>
         </section>
 
@@ -264,12 +264,10 @@
     </main>
 
     <script type="module">
-        // ייבוא מודולים מ-Firebase SDK v9
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // פרטי ההתחברות שלך מ-Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE",
             authDomain: "attendancemda.firebaseapp.com",
@@ -280,12 +278,11 @@
             measurementId: "G-0L08HZXS3Z"
         };
 
-        // אתחול Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // === רפרנסים למסכים ב-DOM ===
+        // אלמנטים ב-UI
         const views = {
             auth: document.getElementById('view-auth'),
             student: document.getElementById('view-student'),
@@ -293,38 +290,90 @@
             admin: document.getElementById('view-admin')
         };
         const header = document.getElementById('app-header');
+        const authTitle = document.getElementById('auth-title');
+        const formLogin = document.getElementById('form-login');
+        const formRegister = document.getElementById('form-register');
 
-        // === פונקציית ניתוב (Routing) ===
+        // פונקציית ניתוב לפי תפקיד
+        function routeByUserRole(role) {
+            if (role === 'admin') switchView('admin');
+            else if (role === 'instructor') switchView('instructor');
+            else switchView('student');
+        }
+
         function switchView(viewName) {
             Object.values(views).forEach(view => view.classList.add('hidden'));
             if (views[viewName]) {
                 views[viewName].classList.remove('hidden');
-                header.classList.remove('hidden');
-            } else {
-                views.auth.classList.remove('hidden');
-                header.classList.add('hidden');
+                if (viewName === 'auth') header.classList.add('hidden');
+                else header.classList.remove('hidden');
             }
         }
 
-        // === מאזין לשינוי מצב התחברות (Auth State) ===
+        // מאזין למצב חיבור
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // המשתמש מחובר - כאן נשלוף מ-Firestore את סוג המשתמש (תלמיד/מדריך/מנהל)
-                // לצורך הדגמת המעטפת, נגדיר כרגע ניתוב לתלמיד ברירת מחדל
-                // בהמשך הלוגיקה תהיה: getDoc(doc(db, "users", user.uid)).then(...)
-                console.log("משתמש מחובר:", user.email);
-                switchView('student'); 
+                // בדיקה אם המשתמש הוא ה-Super Admin שהוגדר
+                if (user.email === 'AnfinityRoot@gmail.com') {
+                    routeByUserRole('admin');
+                    return;
+                }
+
+                const userDoc = await getDoc(doc(db, "users", user.uid));
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const studentNameSpan = document.getElementById('student-name');
+                    if (studentNameSpan) studentNameSpan.innerText = userData.fullName;
+                    routeByUserRole(userData.role);
+                } else {
+                    // אם משתמש מחובר אך אין לו דוקומנט (במקרה של תקלה), נשלח אותו לסטודנט כברירת מחדל
+                    routeByUserRole('student');
+                }
             } else {
-                // המשתמש לא מחובר
                 switchView('auth');
             }
         });
 
-        // === לוגיקת UI התחברות והרשמה ===
-        const formLogin = document.getElementById('form-login');
-        const formRegister = document.getElementById('form-register');
-        const authTitle = document.getElementById('auth-title');
+        // לוגיקת רישום
+        formRegister.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const fullName = document.getElementById('reg-name').value;
+            const tz = document.getElementById('reg-id').value;
 
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                await setDoc(doc(db, "users", user.uid), {
+                    fullName: fullName,
+                    tz: tz,
+                    email: email,
+                    role: 'student',
+                    createdAt: serverTimestamp()
+                });
+
+                alert("נרשמת בהצלחה!");
+            } catch (error) {
+                alert("שגיאה ברישום: " + error.message);
+            }
+        });
+
+        // לוגיקת התחברות
+        formLogin.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-id').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                alert("שגיאה בהתחברות: וודא שהזנת פרטים תקינים");
+            }
+        });
+
+        // כפתורי מעבר בין טפסים
         document.getElementById('link-register').addEventListener('click', () => {
             formLogin.classList.add('hidden');
             formRegister.classList.remove('hidden');
@@ -337,31 +386,27 @@
             authTitle.innerText = "התחברות למערכת";
         });
 
-        document.getElementById('btn-logout').addEventListener('click', () => {
-            signOut(auth);
-        });
+        document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
 
-        // === דגימת מיקום (Mocking ללוגיקת ה-GPS) ===
+        // דגימת מיקום (GPS)
         document.getElementById('btn-mark-attendance')?.addEventListener('click', () => {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(
                     (position) => {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
-                        alert(`מיקום נדגם בהצלחה!\nקו רוחב: ${lat.toFixed(5)}\nקו אורך: ${lng.toFixed(5)}\nהנתונים ישלחו לאימות מול מיקום המדריך.`);
-                        // כאן תיכנס הלוגיקה שמחשבת מרחק ממיקום המדריך ב-Firestore
+                        alert(`מיקום נדגם בהצלחה!\nקו רוחב: ${lat.toFixed(5)}\nקו אורך: ${lng.toFixed(5)}`);
                     },
                     (error) => {
-                        alert("שגיאה בדגימת מיקום. אנא ודא ששירותי המיקום (GPS) דולקים ואישרת הרשאה לדפדפן.");
+                        alert("שגיאה בדגימת מיקום. ודא שה-GPS פעיל.");
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
             } else {
-                alert("הדפדפן שלך אינו תומך בשירותי מיקום.");
+                alert("הדפדפן אינו תומך במיקום.");
             }
         });
-
     </script>
 </body>
-  </html>
-      
+    </html>
+                
