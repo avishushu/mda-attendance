@@ -2,16 +2,18 @@
 <html lang="he">
 <head>
 <meta charset="UTF-8">
-<title>Attendance System</title>
+<title>Attendance PRO MAX</title>
 
 <style>
 body {background:#0b0f1a;color:white;font-family:Arial;text-align:center;}
 .card {background:#111827;margin:10px;padding:10px;border-radius:10px;}
 button {padding:10px;margin:5px;border:none;border-radius:8px;background:#1e90ff;color:white;}
 input {padding:10px;margin:5px;}
+
 .green{background:#16a34a;}
 .orange{background:#f97316;}
 .red{background:#dc2626;}
+.gray{background:#6b7280;}
 </style>
 </head>
 
@@ -20,12 +22,15 @@ input {padding:10px;margin:5px;}
 <h1>מערכת נוכחות</h1>
 
 <div id="auth">
+<input id="name" placeholder="שם מלא"><br>
 <input id="email" placeholder="email"><br>
-<input id="password" type="password" placeholder="password"><br>
+<input id="password" type="password"><br>
+
 <select id="role">
 <option value="student">תלמיד</option>
 <option value="instructor">מדריך</option>
 </select><br>
+
 <button onclick="register()">הרשמה</button>
 <button onclick="login()">כניסה</button>
 </div>
@@ -35,11 +40,11 @@ input {padding:10px;margin:5px;}
 <h2 id="userInfo"></h2>
 
 <div class="card">
-<h3>קבוצה</h3>
+<h3>קבוצות</h3>
 <input id="groupName" placeholder="שם קבוצה">
-<button onclick="createGroup()">צור קבוצה</button><br>
+<button onclick="createGroup()">צור</button><br>
 
-<input id="joinCode" placeholder="קוד קבוצה">
+<input id="joinCode" placeholder="קוד">
 <button onclick="joinGroup()">הצטרף</button>
 
 <div id="groups"></div>
@@ -47,7 +52,8 @@ input {padding:10px;margin:5px;}
 
 <div class="card">
 <h3>מפגש</h3>
-<button onclick="openSession()">פתח מפגש</button>
+<button onclick="openSession()">פתח</button>
+<button onclick="endSession()">סיים</button>
 <button onclick="markAttendance()">אני בשיעור</button>
 </div>
 
@@ -56,8 +62,8 @@ input {padding:10px;margin:5px;}
 <div id="attendanceList"></div>
 </div>
 
-<div class="card">
-<h3>חריגים (מדריך)</h3>
+<div class="card" id="exceptionsCard" style="display:none">
+<h3>חריגים</h3>
 <div id="exceptions"></div>
 </div>
 
@@ -68,7 +74,7 @@ input {padding:10px;margin:5px;}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, onSnapshot, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSy...",
@@ -81,14 +87,16 @@ const auth = getAuth();
 const db = getFirestore();
 
 let currentUser, role, currentGroup=null;
+let usersCache = {};
+let sessionActive=false;
 
 // ===== AUTH =====
 
 window.register = async ()=>{
-  const user = await createUserWithEmailAndPassword(auth,email.value,password.value);
+  const u = await createUserWithEmailAndPassword(auth,email.value,password.value);
 
-  await setDoc(doc(db,"users",user.user.uid),{
-    email:email.value,
+  await setDoc(doc(db,"users",u.user.uid),{
+    name:name.value,
     role:roleSelect.value
   });
 
@@ -102,20 +110,23 @@ window.login = async ()=>{
   const userDoc = await getDoc(doc(db,"users",currentUser.uid));
   role = userDoc.data().role;
 
+  userInfo.innerText = userDoc.data().name + " | " + role;
+
   authDiv.style.display="none";
   app.style.display="block";
 
-  userInfo.innerText = role;
+  if(role==="instructor"){
+    exceptionsCard.style.display="block";
+    listenExceptions();
+  }
 
   loadGroups();
-  listenAttendance();
-  listenExceptions();
 };
 
-// ===== GROUPS =====
+// ===== GROUP =====
 
 window.createGroup = async ()=>{
-  if(role !== "instructor") return alert("רק מדריך");
+  if(role!=="instructor") return alert("רק מדריך");
 
   const code = Math.random().toString(36).substring(2,7);
 
@@ -129,32 +140,32 @@ window.createGroup = async ()=>{
 };
 
 window.joinGroup = async ()=>{
-  const q = query(collection(db,"groups"), where("code","==",joinCode.value));
+  const snap = await getDocs(query(collection(db,"groups"), where("code","==",joinCode.value)));
 
-  onSnapshot(q, snap=>{
-    snap.forEach(async g=>{
-      await addDoc(collection(db,"members"),{
-        groupId:g.id,
-        userId:currentUser.uid
-      });
-      currentGroup = g.id;
+  snap.forEach(async g=>{
+    await addDoc(collection(db,"members"),{
+      groupId:g.id,
+      userId:currentUser.uid
     });
+    currentGroup = g.id;
+    listenAttendance();
   });
 };
 
-// realtime groups
 function loadGroups(){
-  const q = query(collection(db,"members"), where("userId","==",currentUser.uid));
-
-  onSnapshot(q, async snap=>{
+  onSnapshot(query(collection(db,"members"), where("userId","==",currentUser.uid)), async snap=>{
     groups.innerHTML="";
 
     for(const m of snap.docs){
       const g = await getDoc(doc(db,"groups",m.data().groupId));
 
-      const div = document.createElement("div");
+      const div=document.createElement("div");
       div.innerText = g.data().name;
-      div.onclick = ()=> currentGroup = m.data().groupId;
+
+      div.onclick=()=>{
+        currentGroup = m.data().groupId;
+        listenAttendance();
+      };
 
       groups.appendChild(div);
     }
@@ -172,8 +183,33 @@ navigator.geolocation.getCurrentPosition(async pos=>{
     open:true
   });
 
+  sessionActive=true;
   alert("נפתח");
 });
+};
+
+window.endSession = async ()=>{
+  sessionActive=false;
+
+  // mark absents
+  const membersSnap = await getDocs(query(collection(db,"members"), where("groupId","==",currentGroup)));
+
+  const attSnap = await getDocs(query(collection(db,"attendance"), where("group","==",currentGroup)));
+
+  const attended = attSnap.docs.map(d=>d.data().user);
+
+  for(const m of membersSnap.docs){
+    if(!attended.includes(m.data().userId)){
+      await addDoc(collection(db,"attendance"),{
+        user:m.data().userId,
+        group:currentGroup,
+        status:"absent",
+        time:Date.now()
+      });
+    }
+  }
+
+  alert("מפגש הסתיים");
 };
 
 // ===== ATTENDANCE =====
@@ -183,12 +219,7 @@ navigator.geolocation.getCurrentPosition(async pos=>{
 
   const session = (await getDoc(doc(db,"sessions",currentGroup))).data();
 
-  const dist = distance(
-    pos.coords.latitude,
-    pos.coords.longitude,
-    session.lat,
-    session.lng
-  );
+  const dist = distance(pos.coords.latitude,pos.coords.longitude,session.lat,session.lng);
 
   if(dist > 0.07){
     await addDoc(collection(db,"exceptions"),{
@@ -197,8 +228,7 @@ navigator.geolocation.getCurrentPosition(async pos=>{
       dist,
       time:Date.now()
     });
-    alert("חריג נשלח");
-    return;
+    return alert("חריג נשלח");
   }
 
   let status = Date.now()-session.start > 5*60*1000 ? "late" : "on_time";
@@ -215,46 +245,62 @@ navigator.geolocation.getCurrentPosition(async pos=>{
 
 // realtime attendance
 function listenAttendance(){
-  const q = query(
-    collection(db,"attendance"),
-    where("group","==",currentGroup || "")
-  );
-
-  onSnapshot(q, snap=>{
+  onSnapshot(query(collection(db,"attendance"), where("group","==",currentGroup)), async snap=>{
     attendanceList.innerHTML="";
 
-    snap.forEach(a=>{
+    for(const a of snap.docs){
       const d=a.data();
+
+      if(!usersCache[d.user]){
+        const u = await getDoc(doc(db,"users",d.user));
+        usersCache[d.user]=u.data().name;
+      }
 
       const div=document.createElement("div");
 
       div.className =
         d.status==="on_time" ? "green" :
-        d.status==="late" ? "orange" : "red";
+        d.status==="late" ? "orange" :
+        d.status==="absent" ? "red" : "gray";
 
-      div.innerText = d.user + " | " + d.status;
+      div.innerText = usersCache[d.user] + " - " + d.status;
+
+      // instructor edit
+      if(role==="instructor"){
+        div.onclick=async ()=>{
+          await addDoc(collection(db,"logs"),{
+            editor:currentUser.uid,
+            user:d.user,
+            old:d.status,
+            new:"approved",
+            time:Date.now()
+          });
+
+          await addDoc(collection(db,"attendance"),{
+            user:d.user,
+            group:currentGroup,
+            status:"approved",
+            time:Date.now()
+          });
+        };
+      }
 
       attendanceList.appendChild(div);
-    });
+    }
   });
 }
 
 // ===== EXCEPTIONS =====
 
 function listenExceptions(){
-  if(role !== "instructor") return;
-
-  const q = query(collection(db,"exceptions"));
-
-  onSnapshot(q, snap=>{
+  onSnapshot(collection(db,"exceptions"), snap=>{
     exceptions.innerHTML="";
 
     snap.forEach(e=>{
       const d=e.data();
 
       const div=document.createElement("div");
-
-      div.innerText = d.user + " חריג";
+      div.innerText = d.user + " חריג ("+d.dist.toFixed(2)+"km)";
 
       const btn=document.createElement("button");
       btn.innerText="אשר";
@@ -266,6 +312,8 @@ function listenExceptions(){
           status:"approved",
           time:Date.now()
         });
+
+        await deleteDoc(e.ref);
       };
 
       div.appendChild(btn);
@@ -274,7 +322,7 @@ function listenExceptions(){
   });
 }
 
-// ===== UTILS =====
+// ===== UTIL =====
 
 function distance(lat1,lon1,lat2,lon2){
   const R=6371;
@@ -293,7 +341,7 @@ window.logout = async ()=>{
   location.reload();
 };
 
-// refs
+const name=document.getElementById("name");
 const email=document.getElementById("email");
 const password=document.getElementById("password");
 const roleSelect=document.getElementById("role");
@@ -301,4 +349,4 @@ const authDiv=document.getElementById("auth");
 </script>
 
 </body>
-  </html>
+</html>
