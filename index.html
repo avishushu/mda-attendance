@@ -2,29 +2,24 @@
 <html lang="he">
 <head>
 <meta charset="UTF-8">
-<title>Attendance System PRO UI</title>
+<title>Attendance Clean MVP</title>
 
 <style>
 body{
   margin:0;
   font-family:Arial;
-  background:#0a0f1f;
+  background:#0b1220;
   color:white;
 }
 
-.hidden{display:none}
-
-.container{
-  max-width:900px;
-  margin:auto;
-  padding:20px;
-}
+.screen{display:none;padding:20px}
+.active{display:block}
 
 .card{
   background:#111a2e;
   padding:15px;
   margin:10px 0;
-  border-radius:12px;
+  border-radius:10px;
 }
 
 input,button,select{
@@ -34,103 +29,58 @@ input,button,select{
   border:none;
 }
 
-button{
-  background:#2563eb;
-  color:white;
-  cursor:pointer;
-}
+button{background:#2563eb;color:white;cursor:pointer}
 
-button:hover{background:#1d4ed8}
-
-.grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-.tag{
-  padding:5px 10px;
-  border-radius:6px;
-  display:inline-block;
-}
+.tag{padding:4px 8px;border-radius:6px}
 
 .on{background:#16a34a}
 .late{background:#f97316}
 .absent{background:#dc2626}
-
-.header{
-  font-size:22px;
-  margin-bottom:10px;
-}
-
-.small{opacity:0.7;font-size:12px}
 </style>
 </head>
 
 <body>
 
-<div class="container">
-
 <!-- LOGIN -->
-<div id="loginScreen">
-  <h1>מערכת נוכחות</h1>
+<div id="login" class="screen active">
+  <h2>Login</h2>
 
   <input id="email" placeholder="email"><br>
-  <input id="password" type="password" placeholder="password"><br>
+  <input id="pass" type="password" placeholder="password"><br>
 
   <select id="role">
     <option value="student">תלמיד</option>
     <option value="instructor">מדריך</option>
   </select><br>
 
-  <button onclick="login()">כניסה</button>
   <button onclick="register()">הרשמה</button>
+  <button onclick="login()">כניסה</button>
 </div>
 
-<!-- DASHBOARD -->
-<div id="app" class="hidden">
+<!-- APP -->
+<div id="app" class="screen">
 
-  <div class="header" id="userLabel"></div>
+  <h3 id="userInfo"></h3>
 
-  <div class="grid">
+  <div class="card">
+    <h3>קבוצה</h3>
+    <input id="groupIdInput" placeholder="קוד קבוצה">
+    <button onclick="joinGroup()">הצטרף</button>
+    <button onclick="createGroup()">צור (מדריך)</button>
 
-    <!-- GROUPS -->
-    <div class="card">
-      <h3>קבוצות</h3>
-
-      <input id="groupName" placeholder="שם קבוצה">
-      <button onclick="createGroup()">צור</button><br>
-
-      <input id="joinCode" placeholder="קוד קבוצה">
-      <button onclick="joinGroup()">הצטרף</button>
-
-      <div id="groups"></div>
-    </div>
-
-    <!-- SESSION -->
-    <div class="card">
-      <h3>מפגש</h3>
-      <button onclick="openSession()">פתח מפגש</button>
-      <button onclick="mark()">אני בשיעור</button>
-      <button onclick="endSession()">סיים</button>
-      <div class="small">נוכחות מתעדכנת בזמן אמת</div>
-    </div>
-
+    <div id="groupBox"></div>
   </div>
 
-  <!-- ATTENDANCE -->
+  <div class="card">
+    <h3>מפגש</h3>
+    <button onclick="openSession()">פתח מפגש</button>
+    <button onclick="mark()">אני בשיעור</button>
+  </div>
+
   <div class="card">
     <h3>נוכחות</h3>
-    <div id="attendance"></div>
+    <div id="attBox"></div>
   </div>
-
-  <!-- STATS -->
-  <div class="card">
-    <h3>סטטיסטיקה</h3>
-    <canvas id="chart"></canvas>
-  </div>
-
-</div>
 
 </div>
 
@@ -140,80 +90,102 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } f
 import { getFirestore, doc, setDoc, getDoc, addDoc, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "attendancemda.firebaseapp.com",
-  projectId: "attendancemda"
+  apiKey: "YOUR_KEY",
+  authDomain: "YOUR_DOMAIN",
+  projectId: "YOUR_PROJECT"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 const db = getFirestore();
 
-let user, role, group=null;
+let user=null;
+let role=null;
+let group=null;
 
-// ===== AUTH =====
+// ===== AUTH SAFE =====
 
 window.register = async ()=>{
-  const u = await createUserWithEmailAndPassword(auth,email.value,password.value);
+  const u = await createUserWithEmailAndPassword(auth,email.value,pass.value);
 
   await setDoc(doc(db,"users",u.user.uid),{
-    email:email.value,
-    role:role.value
+    role:role.value,
+    email:email.value
   });
 
   alert("נרשמת");
 };
 
 window.login = async ()=>{
-  const r = await signInWithEmailAndPassword(auth,email.value,password.value);
+  const r = await signInWithEmailAndPassword(auth,email.value,pass.value);
+
   user = r.user;
 
   const d = await getDoc(doc(db,"users",user.uid));
   role = d.data().role;
 
-  loginScreen.classList.add("hidden");
-  app.classList.remove("hidden");
+  switchScreen("app");
 
-  userLabel.innerText = role + " מחובר";
+  userInfo.innerText = role;
 
   listenAttendance();
 };
 
-// ===== GROUPS =====
+// ===== NAV =====
+
+function switchScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// ===== GROUP =====
 
 window.createGroup = async ()=>{
-  const code = Math.random().toString(36).substring(2,7);
+  if(role!=="instructor") return alert("אין הרשאה");
 
-  await addDoc(collection(db,"groups"),{
-    name:groupName.value,
-    code,
-    instructor:user.uid
+  group = Math.random().toString(36).substring(2,7);
+
+  await setDoc(doc(db,"groups",group),{
+    owner:user.uid
   });
 
-  alert(code);
+  alert("קוד: "+group);
 };
 
-window.joinGroup = async ()=>{
-  group = joinCode.value;
+window.joinGroup = ()=>{
+  group = groupIdInput.value;
 };
 
 // ===== SESSION =====
 
 window.openSession = async ()=>{
+  if(!group) return alert("אין קבוצה");
+
   navigator.geolocation.getCurrentPosition(async p=>{
     await setDoc(doc(db,"sessions",group),{
       lat:p.coords.latitude,
       lng:p.coords.longitude,
       start:Date.now()
     });
+
+    alert("נפתח מפגש");
   });
 };
 
-window.mark = async ()=>{
+// ===== MARK =====
+
+window.mark = ()=>{
+  if(!group) return alert("אין קבוצה");
+
   navigator.geolocation.getCurrentPosition(async p=>{
     const s = await getDoc(doc(db,"sessions",group));
 
-    const d = distance(p.coords.latitude,p.coords.longitude,s.data().lat,s.data().lng);
+    const d = distance(
+      p.coords.latitude,
+      p.coords.longitude,
+      s.data().lat,
+      s.data().lng
+    );
 
     let status = d < 0.07 ? "on" : "late";
 
@@ -226,56 +198,22 @@ window.mark = async ()=>{
   });
 };
 
-window.endSession = ()=>{
-  alert("הסתיים");
-};
-
-// ===== REALTIME =====
+// ===== REALTIME SAFE =====
 
 function listenAttendance(){
-  const q = query(collection(db,"attendance"), where("group","==",group));
+  const q = query(collection(db,"attendance"), where("group","==",group || ""));
 
   onSnapshot(q, snap=>{
-    attendance.innerHTML="";
+    attBox.innerHTML="";
 
-    let on=0,late=0,abs=0;
-
-    snap.forEach(s=>{
-      const d=s.data();
-
-      if(d.status==="on") on++;
-      if(d.status==="late") late++;
+    snap.forEach(d=>{
+      const a=d.data();
 
       const div=document.createElement("div");
+      div.innerHTML = `<span class="tag ${a.status}">${a.status}</span> ${a.user}`;
 
-      div.innerHTML = `
-        <span class="tag ${d.status}">${d.status}</span>
-        ${d.user}
-      `;
-
-      attendance.appendChild(div);
+      attBox.appendChild(div);
     });
-
-    drawChart(on,late,abs);
-  });
-}
-
-// ===== SIMPLE CHART =====
-
-function drawChart(on,late,abs){
-  const c=document.getElementById("chart");
-  const ctx=c.getContext("2d");
-
-  c.width=300;c.height=150;
-
-  ctx.clearRect(0,0,300,150);
-
-  const data=[on,late,abs];
-  const colors=["#16a34a","#f97316","#dc2626"];
-
-  data.forEach((v,i)=>{
-    ctx.fillStyle=colors[i];
-    ctx.fillRect(i*80+30,150-v*10,40,v*10);
   });
 }
 
