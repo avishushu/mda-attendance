@@ -1,190 +1,279 @@
 <!DOCTYPE html>
 <html lang="he">
 <head>
-  <meta charset="UTF-8">
-  <title>Attendance App</title>
-  <style>
-    body {
-      font-family: Arial;
-      background: #0b0f1a;
-      color: white;
-      text-align: center;
-    }
+<meta charset="UTF-8">
+<title>Attendance Pro</title>
 
-    input, button {
-      margin: 10px;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-    }
+<style>
+body {
+  background:#0b0f1a;
+  color:white;
+  font-family:Arial;
+  text-align:center;
+}
 
-    button {
-      background: #1e90ff;
-      color: white;
-      cursor: pointer;
-    }
+.card {
+  background:#111827;
+  margin:15px;
+  padding:15px;
+  border-radius:10px;
+}
 
-    .hidden {
-      display: none;
-    }
-  </style>
+button {
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:8px;
+  background:#1e90ff;
+  color:white;
+}
+
+input {
+  padding:10px;
+  margin:5px;
+}
+
+.green {background:#16a34a;}
+.orange {background:#f97316;}
+.red {background:#dc2626;}
+</style>
 </head>
+
 <body>
 
 <h1>מערכת נוכחות</h1>
 
 <div id="auth">
-  <h2>התחברות</h2>
-  <input id="email" placeholder="Email"><br>
-  <input id="password" type="password" placeholder="Password"><br>
-  <button onclick="login()">Login</button>
-  <button onclick="register()">Register</button>
+<input id="email" placeholder="email"><br>
+<input id="password" type="password" placeholder="password"><br>
+<select id="role">
+  <option value="student">תלמיד</option>
+  <option value="instructor">מדריך</option>
+</select><br>
+<button onclick="register()">הרשמה</button>
+<button onclick="login()">כניסה</button>
 </div>
 
-<div id="dashboard" class="hidden">
-  <h2 id="welcome"></h2>
-  <button onclick="createGroup()">צור קבוצה</button>
-  <button onclick="joinGroup()">הצטרף לקבוצה</button>
-  <button onclick="openSession()">פתח מפגש</button>
-  <button onclick="markAttendance()">אני בשיעור</button>
-  <button onclick="logout()">התנתק</button>
+<div id="app" style="display:none">
+
+<h2 id="userInfo"></h2>
+
+<div class="card">
+<h3>קבוצות</h3>
+<input id="groupName" placeholder="שם קבוצה">
+<button onclick="createGroup()">צור</button><br>
+
+<input id="joinCode" placeholder="קוד קבוצה">
+<button onclick="joinGroup()">הצטרף</button>
+
+<div id="groups"></div>
+</div>
+
+<div class="card">
+<h3>מפגש</h3>
+<button onclick="openSession()">פתח מפגש</button>
+<button onclick="markAttendance()">אני בשיעור</button>
+</div>
+
+<div class="card">
+<h3>נוכחות</h3>
+<div id="attendanceList"></div>
+</div>
+
+<button onclick="logout()">התנתק</button>
+
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE",
+  apiKey: "AIzaSy...",
   authDomain: "attendancemda.firebaseapp.com",
-  projectId: "attendancemda",
-  storageBucket: "attendancemda.firebasestorage.app",
-  messagingSenderId: "303165146059",
-  appId: "1:303165146059:web:cf698f5837c0ee96702c4e",
+  projectId: "attendancemda"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth();
 const db = getFirestore();
 
+let currentUser = null;
+let currentRole = null;
+
 // ===== AUTH =====
 
 window.register = async () => {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const email = emailEl.value;
+  const password = passwordEl.value;
+  const role = roleEl.value;
 
-  const userCred = await createUserWithEmailAndPassword(auth, email, password);
+  const user = await createUserWithEmailAndPassword(auth, email, password);
 
-  await setDoc(doc(db, "users", userCred.user.uid), {
-    email,
-    role: "student"
+  await setDoc(doc(db,"users",user.user.uid),{
+    email, role
   });
 
-  alert("נרשמת בהצלחה");
+  alert("נרשמת");
 };
 
 window.login = async () => {
-  const email = document.getElementById("email").value;
-  const password = document.getElementById("password").value;
+  const email = emailEl.value;
+  const password = passwordEl.value;
 
-  const userCred = await signInWithEmailAndPassword(auth, email, password);
+  const res = await signInWithEmailAndPassword(auth,email,password);
+  currentUser = res.user;
 
-  document.getElementById("auth").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
-  document.getElementById("welcome").innerText = "שלום " + email;
+  const userDoc = await getDoc(doc(db,"users",currentUser.uid));
+  currentRole = userDoc.data().role;
+
+  document.getElementById("auth").style.display="none";
+  document.getElementById("app").style.display="block";
+
+  userInfo.innerText = email + " | " + currentRole;
+
+  loadGroups();
 };
 
-window.logout = async () => {
-  await signOut(auth);
-  location.reload();
-};
-
-// ===== GROUP =====
+// ===== GROUPS =====
 
 window.createGroup = async () => {
-  const name = prompt("שם קבוצה:");
-  const user = auth.currentUser;
+  if(currentRole !== "instructor") return alert("רק מדריך");
 
-  await setDoc(doc(db, "groups", name), {
+  const name = groupName.value;
+  const code = Math.random().toString(36).substring(2,7);
+
+  await addDoc(collection(db,"groups"),{
     name,
-    instructor: user.uid
+    code,
+    instructor: currentUser.uid
   });
 
-  alert("קבוצה נוצרה");
+  alert("קוד קבוצה: "+code);
+  loadGroups();
 };
 
 window.joinGroup = async () => {
-  const name = prompt("שם קבוצה:");
-  const user = auth.currentUser;
+  const code = joinCode.value;
 
-  await setDoc(doc(db, "groups", name + "_student_" + user.uid), {
-    group: name,
-    user: user.uid
+  const q = query(collection(db,"groups"), where("code","==",code));
+  const snap = await getDocs(q);
+
+  snap.forEach(async docu=>{
+    await addDoc(collection(db,"members"),{
+      groupId: docu.id,
+      userId: currentUser.uid
+    });
   });
 
-  alert("נשלחה בקשת הצטרפות");
+  alert("הצטרפת");
+  loadGroups();
 };
+
+async function loadGroups(){
+  groups.innerHTML="";
+
+  const snap = await getDocs(collection(db,"groups"));
+
+  snap.forEach(g=>{
+    const div = document.createElement("div");
+    div.innerText = g.data().name;
+    groups.appendChild(div);
+  });
+}
 
 // ===== SESSION =====
 
 window.openSession = () => {
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const { latitude, longitude } = pos.coords;
-
-    await setDoc(doc(db, "session", "active"), {
-      lat: latitude,
-      lng: longitude,
-      open: true
-    });
-
-    alert("מפגש נפתח");
-  }, () => {
-    alert("אין גישה למיקום");
+navigator.geolocation.getCurrentPosition(async pos=>{
+  await setDoc(doc(db,"session","active"),{
+    lat:pos.coords.latitude,
+    lng:pos.coords.longitude,
+    start:Date.now()
   });
+
+  alert("מפגש נפתח");
+});
 };
 
 // ===== ATTENDANCE =====
 
 window.markAttendance = () => {
-  navigator.geolocation.getCurrentPosition(async (pos) => {
+navigator.geolocation.getCurrentPosition(async pos=>{
 
-    const sessionSnap = await getDoc(doc(db, "session", "active"));
-    const session = sessionSnap.data();
+  const session = (await getDoc(doc(db,"session","active"))).data();
 
-    const distance = getDistance(
-      pos.coords.latitude,
-      pos.coords.longitude,
-      session.lat,
-      session.lng
-    );
+  const dist = distance(
+    pos.coords.latitude,
+    pos.coords.longitude,
+    session.lat,
+    session.lng
+  );
 
-    if (distance <= 0.07) {
-      alert("נוכחות נקלטה ✅");
-    } else {
-      alert("אתה מחוץ לטווח ❌");
-    }
+  let status = "on_time";
 
-  }, () => {
-    alert("אין GPS");
+  if(Date.now() - session.start > 5*60*1000){
+    status = "late";
+  }
+
+  await addDoc(collection(db,"attendance"),{
+    user:currentUser.uid,
+    time:Date.now(),
+    status,
+    distance:dist
   });
+
+  alert(status === "on_time" ? "בזמן" : "איחור");
+
+  loadAttendance();
+
+});
 };
 
-// ===== DISTANCE =====
+async function loadAttendance(){
+  attendanceList.innerHTML="";
 
-function getDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const snap = await getDocs(collection(db,"attendance"));
 
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  snap.forEach(a=>{
+    const d = a.data();
 
-  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    const div = document.createElement("div");
+
+    div.className =
+      d.status==="on_time" ? "green" :
+      d.status==="late" ? "orange" : "red";
+
+    div.innerText = d.user + " - " + d.status;
+
+    attendanceList.appendChild(div);
+  });
 }
+
+// ===== UTIL =====
+
+function distance(lat1,lon1,lat2,lon2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+
+  const a=Math.sin(dLat/2)**2+
+  Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+  Math.sin(dLon/2)**2;
+
+  return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+window.logout = async ()=>{
+  await signOut(auth);
+  location.reload();
+};
+
+// quick refs
+const emailEl = document.getElementById("email");
+const passwordEl = document.getElementById("password");
+const roleEl = document.getElementById("role");
 </script>
 
 </body>
