@@ -432,73 +432,304 @@
                     const hasAttended = (activeSession.attendance && activeSession.attendance[auth.currentUser.uid]) || 
                                         (activeSession.exceptions && activeSession.exceptions[auth.currentUser.uid]);
 
-                    if (hasAttended) {
-                         statusHtml = `<span class="status-badge status-open" style="background-color: var(--dark-blue);">נוכחות דווחה</span>`;
-                    } else {
-                        statusHtml = `<span class="status-badge status-open">מפגש ${activeSession.sessionNumber} פתוח!</span>`;
-                        buttonHtml = `<button class="success mt-10" onclick="window.markAttendance('${groupId}', '${sessionId}', ${activeSession.instructorLocation.lat}, ${activeSession.instructorLocation.lng})">דווח נוכחות (GPS)</button>`;
-                    }
-                }
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, serverTimestamp, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-                const div = document.createElement('div');
-                div.style = "border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-bottom: 10px;";
-                div.innerHTML = `<strong>${group.name}</strong><br>סטטוס: ${statusHtml}${buttonHtml}`;
-                wrapper.appendChild(div);
+    const firebaseConfig = {
+        apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE",
+        authDomain: "attendancemda.firebaseapp.com",
+        projectId: "attendancemda",
+        storageBucket: "attendancemda.firebasestorage.app",
+        messagingSenderId: "303165146059",
+        appId: "1:303165146059:web:cf698f5837c0ee96702c4e",
+        measurementId: "G-0L08HZXS3Z"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserData = null;
+
+    const views = {
+        auth: document.getElementById('view-auth'),
+        student: document.getElementById('view-student'),
+        instructor: document.getElementById('view-instructor'),
+        admin: document.getElementById('view-admin')
+    };
+
+    function switchView(viewName) {
+        Object.values(views).forEach(v => v.classList.add('hidden'));
+        views[viewName].classList.remove('hidden');
+        document.getElementById('app-header').classList.toggle('hidden', viewName === 'auth');
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                currentUserData = userDoc.data();
+                currentUserData.uid = user.uid;
+                
+                if (currentUserData.role === 'admin') {
+                    switchView('admin');
+                } else if (currentUserData.role === 'instructor') {
+                    switchView('instructor');
+                    loadInstructorGroups();
+                } else {
+                    switchView('student');
+                    document.getElementById('student-name').innerText = currentUserData.fullName;
+                    loadStudentDashboard();
+                }
             }
+        } else {
+            switchView('auth');
+        }
+    });
+
+    // === נוסחת חישוב מרחק ב-GPS (מטרים) ===
+    function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // רדיוס כדור הארץ במטרים
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c; 
+    }
+
+    // === פונקציות מדריך ===
+
+    async function createNewGroup(groupName) {
+        try {
+            await addDoc(collection(db, "groups"), {
+                name: groupName,
+                instructorId: auth.currentUser.uid,
+                instructorName: currentUserData.fullName,
+                createdAt: serverTimestamp(),
+                members: [] 
+            });
+            alert("הקבוצה נוצרה בהצלחה!");
+            loadInstructorGroups();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function openAttendanceSession(groupId) {
+        if (!navigator.geolocation) return alert("הדפדפן לא תומך במיקום");
+
+        // 1. ספירת מפגשים קיימים למספור אוטומטי
+        const sessionsRef = collection(db, "groups", groupId, "sessions");
+        const sessionsSnap = await getDocs(sessionsRef);
+        const nextSessionNum = sessionsSnap.size + 1;
+        
+        // 2. בקשת אישור מהמדריך למספר המפגש
+        let sessionNumber = prompt("מספר המפגש הנוכחי הוא:", nextSessionNum);
+        if (sessionNumber === null || sessionNumber.trim() === "") return; // המדריך ביטל
+
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            
+            // 3. יצירת המפגש עם המספר שנקבע
+            await addDoc(sessionsRef, {
+                sessionNumber: sessionNumber,
+                startTime: serverTimestamp(),
+                instructorLocation: { lat, lng },
+                status: 'open',
+                attendance: {}, 
+                exceptions: {} // כאן ישמרו החריגים מחוץ לטווח
+            });
+
+            alert(`מפגש מספר ${sessionNumber} נפתח! מיקומך נדגם.`);
+            loadInstructorGroups();
+        }, (err) => {
+            alert("חובה לאשר גישה למיקום (GPS) כדי לפתוח מפגש.");
+        }, { enableHighAccuracy: true });
+    }
+
+    async function loadInstructorGroups() {
+        const container = document.getElementById('instructor-groups-list');
+        container.innerHTML = "טוען קבוצות...";
+        const q = query(collection(db, "groups"), where("instructorId", "==", auth.currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        
+        container.innerHTML = "";
+        querySnapshot.forEach((docSnap) => {
+            const group = docSnap.data();
+            const div = document.createElement('div');
+            div.className = "card";
+            div.style.border = "1px solid #ddd";
+            div.innerHTML = `
+                <strong>${group.name}</strong><br>
+                <small>מזהה קבוצה להעברה לחניכים: <b>${docSnap.id}</b></small><br>
+                <button class="mt-10" onclick="window.openSession('${docSnap.id}')">פתח רישום נוכחות למפגש הבא</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    // === פונקציות תלמיד ===
+
+    // פונקציית הצטרפות לקבוצה
+    window.joinGroup = async () => {
+        const groupId = prompt("הכנס את מזהה הקבוצה שקיבלת מהמדריך:");
+        if (!groupId) return;
+
+        try {
+            const groupRef = doc(db, "groups", groupId);
+            await updateDoc(groupRef, {
+                members: arrayUnion(auth.currentUser.uid)
+            });
+            alert("צורפת לקבוצה בהצלחה!");
+            loadStudentDashboard();
+        } catch (e) {
+            alert("שגיאה בצירוף לקבוצה. ודא שהמזהה מדויק.");
+        }
+    };
+
+    async function loadStudentDashboard() {
+        const container = document.getElementById('student-courses-list');
+        container.innerHTML = `<button class="secondary mb-10" onclick="window.joinGroup()">➕ בקש להצטרף לקבוצה לפי מזהה</button><div id="courses-wrapper">טוען קבוצות...</div>`;
+        
+        const wrapper = document.getElementById('courses-wrapper');
+        const q = query(collection(db, "groups"), where("members", "array-contains", auth.currentUser.uid));
+        const querySnapshot = await getDocs(q);
+        
+        wrapper.innerHTML = "";
+        
+        if (querySnapshot.empty) {
+            wrapper.innerHTML = "אינך משויך לאף קבוצה כרגע.";
+            return;
         }
 
-        window.markAttendance = (groupId, sessionId, instLat, instLng) => {
-            if (!navigator.geolocation) return alert("אין תמיכת GPS");
-            alert("דוגם מיקום...");
+        querySnapshot.forEach(async (docSnap) => {
+            const group = docSnap.data();
+            const groupId = docSnap.id;
             
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const distance = getDistanceFromLatLonInM(instLat, instLng, pos.coords.latitude, pos.coords.longitude);
-                const sessionRef = doc(db, "groups", groupId, "sessions", sessionId);
-                const data = {
-                    name: currentUserData.fullName,
-                    timestamp: serverTimestamp(),
-                    distanceMeters: Math.round(distance)
-                };
+            // חיפוש מפגשים פתוחים לקבוצה זו
+            const sessionsQ = query(collection(db, "groups", groupId, "sessions"), where("status", "==", "open"));
+            const sessionsSnap = await getDocs(sessionsQ);
+            
+            let statusHtml = `<span class="status-badge status-closed">אין רישום פעיל</span>`;
+            let buttonHtml = '';
 
-                if (distance <= 70) {
-                    await updateDoc(sessionRef, { [`attendance.${auth.currentUser.uid}`]: { ...data, status: 'on_time' } });
-                    alert("נוכחות נקלטה!");
+            if (!sessionsSnap.empty) {
+                const activeSessionDoc = sessionsSnap.docs[0];
+                const activeSession = activeSessionDoc.data();
+                const sessionId = activeSessionDoc.id;
+                
+                // בדיקה אם התלמיד כבר נרשם
+                if (activeSession.attendance[auth.currentUser.uid] || activeSession.exceptions[auth.currentUser.uid]) {
+                     statusHtml = `<span class="status-badge status-open" style="background-color: var(--dark-blue);">כבר דיווחת נוכחות</span>`;
                 } else {
-                    await updateDoc(sessionRef, { [`exceptions.${auth.currentUser.uid}`]: { ...data, status: 'pending' } });
-                    alert("מחוץ לטווח. נשלח לאישור חריג.");
+                    statusHtml = `<span class="status-badge status-open">רישום למפגש ${activeSession.sessionNumber} פתוח!</span>`;
+                    buttonHtml = `<button class="success mt-10" onclick="window.markAttendance('${groupId}', '${sessionId}', ${activeSession.instructorLocation.lat}, ${activeSession.instructorLocation.lng})">אני בשיעור (דגום מיקום)</button>`;
                 }
-                loadStudentDashboard();
-            }, (err) => alert("שגיאה במיקום"), { enableHighAccuracy: true });
-        };
+            }
 
-        // === ניהול אירועי כפתורים ===
-        document.getElementById('btn-new-group').addEventListener('click', () => {
-            const name = prompt("שם הקורס:");
-            if (name) createNewGroup(name);
+            const div = document.createElement('div');
+            div.style = "border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-bottom: 10px;";
+            div.innerHTML = `
+                <strong>${group.name}</strong><br>
+                סטטוס: ${statusHtml}
+                ${buttonHtml}
+            `;
+            wrapper.appendChild(div);
         });
+    }
 
-        document.getElementById('form-register').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            try {
-                const cred = await createUserWithEmailAndPassword(auth, email, password);
-                await setDoc(doc(db, "users", cred.user.uid), {
-                    fullName: document.getElementById('reg-name').value,
-                    tz: document.getElementById('reg-id').value,
-                    email: email,
-                    role: 'student',
-                    createdAt: serverTimestamp()
+    window.markAttendance = (groupId, sessionId, instLat, instLng) => {
+        if (!navigator.geolocation) return alert("אין תמיכה במיקום");
+        
+        alert("דוגם מיקום, אנא המתן...");
+        
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            const studentLat = pos.coords.latitude;
+            const studentLng = pos.coords.longitude;
+            
+            // חישוב המרחק
+            const distance = getDistanceFromLatLonInM(instLat, instLng, studentLat, studentLng);
+            const sessionRef = doc(db, "groups", groupId, "sessions", sessionId);
+
+            if (distance <= 70) {
+                // התלמיד בטווח התקין
+                await updateDoc(sessionRef, {
+                    [`attendance.${auth.currentUser.uid}`]: {
+                        name: currentUserData.fullName,
+                        status: 'on_time',
+                        timestamp: serverTimestamp(),
+                        distanceMeters: Math.round(distance)
+                    }
                 });
-                alert("נרשמת בהצלחה!");
-            } catch (e) { alert(e.message); }
-        });
+                alert(`הרישום נקלט בהצלחה! מרחק מהמדריך: ${Math.round(distance)} מטרים.`);
+            } else {
+                // התלמיד מחוץ לטווח - שליחה לחריגים
+                await updateDoc(sessionRef, {
+                    [`exceptions.${auth.currentUser.uid}`]: {
+                        name: currentUserData.fullName,
+                        status: 'pending',
+                        timestamp: serverTimestamp(),
+                        distanceMeters: Math.round(distance)
+                    }
+                });
+                alert(`הינך מחוץ לטווח (${Math.round(distance)} מטרים). הבקשה נשלחה לאישור המדריך כחריג.`);
+            }
+            loadStudentDashboard(); // רענון המסך
+        }, (err) => {
+            alert("שגיאה בדגימת מיקום. ודא ששירותי ה-GPS מופעלים ונתת הרשאה לדפדפן.");
+        }, { enableHighAccuracy: true });
+    };
 
-        document.getElementById('form-login').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await signInWithEmailAndPassword(auth, document.getElementById('login-id').value, document.getElementById('login-password').value);
-            } catch (e) { alert("שגיאה בהתחברות"); }
-        });
+    window.openSession = openAttendanceSession;
 
-     
+    document.getElementById('btn-new-group').addEventListener('click', () => {
+        const name = prompt("הכנס את שם הקבוצה/הקורס:");
+        if (name) createNewGroup(name);
+    });
+
+    // === לוגיקת רישום והתחברות ===
+    document.getElementById('form-register').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('reg-email').value;
+        const password = document.getElementById('reg-password').value;
+        const fullName = document.getElementById('reg-name').value;
+        const tz = document.getElementById('reg-id').value;
+
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            await setDoc(doc(db, "users", userCredential.user.uid), {
+                fullName, tz, email, role: 'student', createdAt: serverTimestamp()
+            });
+            alert("נרשמת בהצלחה!");
+        } catch (error) { alert("שגיאה ברישום: " + error.message); }
+    });
+
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-id').value;
+        const pass = document.getElementById('login-password').value;
+        try {
+            await signInWithEmailAndPassword(auth, email, pass);
+        } catch (error) { alert("שגיאה בהתחברות"); }
+    });
+
+    document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
+
+    // טיפול בקישורי ניווט בעמוד ההתחברות
+    document.getElementById('link-register').addEventListener('click', () => {
+        document.getElementById('form-login').classList.add('hidden');
+        document.getElementById('form-register').classList.remove('hidden');
+        document.getElementById('auth-title').innerText = "הרשמת תלמיד חדש";
+    });
+
+    document.getElementById('link-back-login').addEventListener('click', () => {
+        document.getElementById('form-register').classList.add('hidden');
+        document.getElementById('form-login').classList.remove('hidden');
+        document.getElementById('auth-title').innerText = "התחברות למערכת";
+    });
+</script>
