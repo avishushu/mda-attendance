@@ -215,12 +215,7 @@
                 <h2>שלום, <span id="student-name">תלמיד</span></h2>
                 <p>הקורסים שלי:</p>
                 <div id="student-courses-list" class="mt-10">
-                    <div style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
-                        <strong>קורס חובשים 2026</strong><br>
-                        סטטוס: <span class="status-badge status-open">פתוח לרישום</span>
-                        <button class="success mt-10" id="btn-mark-attendance">אני בשיעור (דגום מיקום)</button>
                     </div>
-                </div>
             </div>
             <div class="card">
                 <h2>נתוני נוכחות אישיים</h2>
@@ -233,15 +228,7 @@
                 <h2>ניהול קבוצות (מדריך)</h2>
                 <button class="secondary mb-10" id="btn-new-group">➕ פתח קבוצה חדשה</button>
                 <div id="instructor-groups-list">
-                    <div style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-bottom: 10px;">
-                        <strong>קורס חובשים 2026 (מפגש #4)</strong><br>
-                        <button class="mt-10" id="btn-open-attendance">פתח רישום נוכחות למפגש</button>
                     </div>
-                </div>
-            </div>
-            <div class="card">
-                <h2>חריגים ממתינים לאישור</h2>
-                <p style="font-size: 0.9rem; color: #666;">אין חריגים כרגע.</p>
             </div>
         </section>
 
@@ -255,19 +242,16 @@
                     <button class="secondary">סטטיסטיקות</button>
                 </div>
             </div>
-            <div class="card">
-                <h2>כלל הקבוצות הפעילות</h2>
-                <p style="font-size: 0.9rem; color: #666;">טוען נתונים...</p>
-            </div>
         </section>
-
     </main>
 
     <script type="module">
+        // === ייבוא ספריות Firebase ===
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, serverTimestamp, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+        // === הגדרות פרויקט ===
         const firebaseConfig = {
             apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE",
             authDomain: "attendancemda.firebaseapp.com",
@@ -282,131 +266,239 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // אלמנטים ב-UI
+        let currentUserData = null;
+
+        // === ניהול תצוגות (Views) ===
         const views = {
             auth: document.getElementById('view-auth'),
             student: document.getElementById('view-student'),
             instructor: document.getElementById('view-instructor'),
             admin: document.getElementById('view-admin')
         };
-        const header = document.getElementById('app-header');
-        const authTitle = document.getElementById('auth-title');
-        const formLogin = document.getElementById('form-login');
-        const formRegister = document.getElementById('form-register');
-
-        // פונקציית ניתוב לפי תפקיד
-        function routeByUserRole(role) {
-            if (role === 'admin') switchView('admin');
-            else if (role === 'instructor') switchView('instructor');
-            else switchView('student');
-        }
 
         function switchView(viewName) {
-            Object.values(views).forEach(view => view.classList.add('hidden'));
+            Object.values(views).forEach(v => v.classList.add('hidden'));
             if (views[viewName]) {
                 views[viewName].classList.remove('hidden');
-                if (viewName === 'auth') header.classList.add('hidden');
-                else header.classList.remove('hidden');
+                document.getElementById('app-header').classList.toggle('hidden', viewName === 'auth');
             }
         }
 
-        // מאזין למצב חיבור
+        // === מאזין למצב חיבור (Auth State) ===
         onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // בדיקה אם המשתמש הוא ה-Super Admin שהוגדר
+                // בדיקת Super Admin ידנית
                 if (user.email === 'AnfinityRoot@gmail.com') {
-                    routeByUserRole('admin');
+                    switchView('admin');
                     return;
                 }
 
                 const userDoc = await getDoc(doc(db, "users", user.uid));
                 if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    const studentNameSpan = document.getElementById('student-name');
-                    if (studentNameSpan) studentNameSpan.innerText = userData.fullName;
-                    routeByUserRole(userData.role);
+                    currentUserData = userDoc.data();
+                    currentUserData.uid = user.uid;
+                    
+                    if (currentUserData.role === 'admin') {
+                        switchView('admin');
+                    } else if (currentUserData.role === 'instructor') {
+                        switchView('instructor');
+                        loadInstructorGroups();
+                    } else {
+                        switchView('student');
+                        document.getElementById('student-name').innerText = currentUserData.fullName;
+                        loadStudentDashboard();
+                    }
                 } else {
-                    // אם משתמש מחובר אך אין לו דוקומנט (במקרה של תקלה), נשלח אותו לסטודנט כברירת מחדל
-                    routeByUserRole('student');
+                    // אם מחובר אך אין דוקומנט (מקרה קצה), ברירת מחדל לתלמיד
+                    switchView('student');
                 }
             } else {
                 switchView('auth');
             }
         });
 
-        // לוגיקת רישום
-        formRegister.addEventListener('submit', async (e) => {
+        // === חישוב מרחק (Haversine Formula) ===
+        function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c; 
+        }
+
+        // === לוגיקת מדריך (Instructor) ===
+        async function createNewGroup(groupName) {
+            try {
+                await addDoc(collection(db, "groups"), {
+                    name: groupName,
+                    instructorId: auth.currentUser.uid,
+                    instructorName: currentUserData.fullName,
+                    createdAt: serverTimestamp(),
+                    members: [] 
+                });
+                alert("הקבוצה נוצרה בהצלחה!");
+                loadInstructorGroups();
+            } catch (e) { console.error(e); }
+        }
+
+        window.openSession = async (groupId) => {
+            if (!navigator.geolocation) return alert("הדפדפן לא תומך במיקום");
+
+            const sessionsRef = collection(db, "groups", groupId, "sessions");
+            const sessionsSnap = await getDocs(sessionsRef);
+            const nextSessionNum = sessionsSnap.size + 1;
+            
+            let sessionNumber = prompt("מספר המפגש הנוכחי הוא:", nextSessionNum);
+            if (!sessionNumber) return;
+
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                await addDoc(sessionsRef, {
+                    sessionNumber: sessionNumber,
+                    startTime: serverTimestamp(),
+                    instructorLocation: { lat: pos.coords.latitude, lng: pos.coords.longitude },
+                    status: 'open',
+                    attendance: {}, 
+                    exceptions: {} 
+                });
+                alert(`מפגש ${sessionNumber} נפתח!`);
+                loadInstructorGroups();
+            }, (err) => alert("חובה לאשר GPS"), { enableHighAccuracy: true });
+        };
+
+        async function loadInstructorGroups() {
+            const container = document.getElementById('instructor-groups-list');
+            container.innerHTML = "טוען...";
+            const q = query(collection(db, "groups"), where("instructorId", "==", auth.currentUser.uid));
+            const querySnapshot = await getDocs(q);
+            
+            container.innerHTML = "";
+            querySnapshot.forEach((docSnap) => {
+                const group = docSnap.data();
+                const div = document.createElement('div');
+                div.className = "card";
+                div.style.border = "1px solid #ddd";
+                div.innerHTML = `
+                    <strong>${group.name}</strong><br>
+                    <small>מזהה קבוצה: <b>${docSnap.id}</b></small><br>
+                    <button class="mt-10" onclick="window.openSession('${docSnap.id}')">פתח רישום נוכחות</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // === לוגיקת תלמיד (Student) ===
+        window.joinGroup = async () => {
+            const groupId = prompt("הכנס מזהה קבוצה:");
+            if (!groupId) return;
+            try {
+                const groupRef = doc(db, "groups", groupId);
+                const groupSnap = await getDoc(groupRef);
+                if (!groupSnap.exists()) return alert("קבוצה לא קיימת");
+                
+                await updateDoc(groupRef, { members: arrayUnion(auth.currentUser.uid) });
+                alert("צורפת בהצלחה!");
+                loadStudentDashboard();
+            } catch (e) { alert("שגיאה בצירוף"); }
+        };
+
+        async function loadStudentDashboard() {
+            const container = document.getElementById('student-courses-list');
+            container.innerHTML = `<button class="secondary mb-10" onclick="window.joinGroup()">➕ הצטרף לקבוצה חדשה</button><div id="courses-wrapper">טוען קורסים...</div>`;
+            
+            const wrapper = document.getElementById('courses-wrapper');
+            const q = query(collection(db, "groups"), where("members", "array-contains", auth.currentUser.uid));
+            const querySnapshot = await getDocs(q);
+            
+            wrapper.innerHTML = querySnapshot.empty ? "אינך רשום לאף קבוצה." : "";
+            
+            for (const docSnap of querySnapshot.docs) {
+                const group = docSnap.data();
+                const groupId = docSnap.id;
+                
+                const sessionsQ = query(collection(db, "groups", groupId, "sessions"), where("status", "==", "open"));
+                const sessionsSnap = await getDocs(sessionsQ);
+                
+                let statusHtml = `<span class="status-badge status-closed">אין רישום פעיל</span>`;
+                let buttonHtml = '';
+
+                if (!sessionsSnap.empty) {
+                    const activeSessionDoc = sessionsSnap.docs[0];
+                    const activeSession = activeSessionDoc.data();
+                    const sessionId = activeSessionDoc.id;
+                    
+                    const hasAttended = (activeSession.attendance && activeSession.attendance[auth.currentUser.uid]) || 
+                                        (activeSession.exceptions && activeSession.exceptions[auth.currentUser.uid]);
+
+                    if (hasAttended) {
+                         statusHtml = `<span class="status-badge status-open" style="background-color: var(--dark-blue);">נוכחות דווחה</span>`;
+                    } else {
+                        statusHtml = `<span class="status-badge status-open">מפגש ${activeSession.sessionNumber} פתוח!</span>`;
+                        buttonHtml = `<button class="success mt-10" onclick="window.markAttendance('${groupId}', '${sessionId}', ${activeSession.instructorLocation.lat}, ${activeSession.instructorLocation.lng})">דווח נוכחות (GPS)</button>`;
+                    }
+                }
+
+                const div = document.createElement('div');
+                div.style = "border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-bottom: 10px;";
+                div.innerHTML = `<strong>${group.name}</strong><br>סטטוס: ${statusHtml}${buttonHtml}`;
+                wrapper.appendChild(div);
+            }
+        }
+
+        window.markAttendance = (groupId, sessionId, instLat, instLng) => {
+            if (!navigator.geolocation) return alert("אין תמיכת GPS");
+            alert("דוגם מיקום...");
+            
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const distance = getDistanceFromLatLonInM(instLat, instLng, pos.coords.latitude, pos.coords.longitude);
+                const sessionRef = doc(db, "groups", groupId, "sessions", sessionId);
+                const data = {
+                    name: currentUserData.fullName,
+                    timestamp: serverTimestamp(),
+                    distanceMeters: Math.round(distance)
+                };
+
+                if (distance <= 70) {
+                    await updateDoc(sessionRef, { [`attendance.${auth.currentUser.uid}`]: { ...data, status: 'on_time' } });
+                    alert("נוכחות נקלטה!");
+                } else {
+                    await updateDoc(sessionRef, { [`exceptions.${auth.currentUser.uid}`]: { ...data, status: 'pending' } });
+                    alert("מחוץ לטווח. נשלח לאישור חריג.");
+                }
+                loadStudentDashboard();
+            }, (err) => alert("שגיאה במיקום"), { enableHighAccuracy: true });
+        };
+
+        // === ניהול אירועי כפתורים ===
+        document.getElementById('btn-new-group').addEventListener('click', () => {
+            const name = prompt("שם הקורס:");
+            if (name) createNewGroup(name);
+        });
+
+        document.getElementById('form-register').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('reg-email').value;
             const password = document.getElementById('reg-password').value;
-            const fullName = document.getElementById('reg-name').value;
-            const tz = document.getElementById('reg-id').value;
-
             try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                await setDoc(doc(db, "users", user.uid), {
-                    fullName: fullName,
-                    tz: tz,
+                const cred = await createUserWithEmailAndPassword(auth, email, password);
+                await setDoc(doc(db, "users", cred.user.uid), {
+                    fullName: document.getElementById('reg-name').value,
+                    tz: document.getElementById('reg-id').value,
                     email: email,
                     role: 'student',
                     createdAt: serverTimestamp()
                 });
-
                 alert("נרשמת בהצלחה!");
-            } catch (error) {
-                alert("שגיאה ברישום: " + error.message);
-            }
+            } catch (e) { alert(e.message); }
         });
 
-        // לוגיקת התחברות
-        formLogin.addEventListener('submit', async (e) => {
+        document.getElementById('form-login').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const email = document.getElementById('login-id').value;
-            const password = document.getElementById('login-password').value;
-
             try {
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                alert("שגיאה בהתחברות: וודא שהזנת פרטים תקינים");
-            }
+                await signInWithEmailAndPassword(auth, document.getElementById('login-id').value, document.getElementById('login-password').value);
+            } catch (e) { alert("שגיאה בהתחברות"); }
         });
 
-        // כפתורי מעבר בין טפסים
-        document.getElementById('link-register').addEventListener('click', () => {
-            formLogin.classList.add('hidden');
-            formRegister.classList.remove('hidden');
-            authTitle.innerText = "הרשמת תלמיד חדש";
-        });
-
-        document.getElementById('link-back-login').addEventListener('click', () => {
-            formRegister.classList.add('hidden');
-            formLogin.classList.remove('hidden');
-            authTitle.innerText = "התחברות למערכת";
-        });
-
-        document.getElementById('btn-logout').addEventListener('click', () => signOut(auth));
-
-        // דגימת מיקום (GPS)
-        document.getElementById('btn-mark-attendance')?.addEventListener('click', () => {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        alert(`מיקום נדגם בהצלחה!\nקו רוחב: ${lat.toFixed(5)}\nקו אורך: ${lng.toFixed(5)}`);
-                    },
-                    (error) => {
-                        alert("שגיאה בדגימת מיקום. ודא שה-GPS פעיל.");
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
-            } else {
-                alert("הדפדפן אינו תומך במיקום.");
-            }
-        });
-    </script>
-</body>
-    </html>
-                
+     
