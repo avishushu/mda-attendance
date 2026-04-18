@@ -47,6 +47,9 @@
         button.secondary:hover { background-color: #121858; }
         button.success { background-color: var(--success-green); }
         button.small { padding: 8px 12px; font-size: 0.9rem; width: auto; }
+        
+        /* עיצוב כפתור דוגם מיקום */
+        button.sampling { background-color: var(--neutral-gray) !important; cursor: not-allowed; }
 
         .hidden { display: none !important; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
@@ -74,6 +77,11 @@
         .text-yellow { color: var(--warning-orange); font-weight: bold; }
         .text-red { color: var(--danger-red); font-weight: bold; }
         .text-gray { color: var(--neutral-gray); }
+
+        /* מודאל עריכת נוכחות */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; }
+        .modal-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -85,6 +93,18 @@
     </header>
 
     <main>
+        <div id="edit-attendance-modal" class="modal-overlay hidden">
+            <div class="modal-content">
+                <h3 id="modal-student-name">עריכת נוכחות</h3>
+                <div class="modal-btns">
+                    <button class="success" onclick="window.processManualEdit('1')">✅ נוכח</button>
+                    <button style="background-color: var(--late-yellow); color: black;" onclick="window.processManualEdit('2')">⏰ איחור</button>
+                    <button style="background-color: var(--danger-red);" onclick="window.processManualEdit('3')">❌ חסר (ביטול)</button>
+                    <button class="secondary" onclick="document.getElementById('edit-attendance-modal').classList.add('hidden')">סגור</button>
+                </div>
+            </div>
+        </div>
+
         <section id="view-auth" class="card">
             <div class="text-center mb-10"><h2 id="auth-title">התחברות למערכת</h2></div>
             <form id="form-login">
@@ -146,7 +166,7 @@
                             <input type="time" id="ns-time">
                         </div>
                         <div class="flex-between gap-10">
-                            <button class="success" onclick="window.submitNewSession()">הפעל מיקום ופתח מפגש</button>
+                            <button class="success" onclick="window.submitNewSession(event)">הפעל מיקום ופתח מפגש</button>
                             <button class="secondary" onclick="document.getElementById('new-session-form').classList.add('hidden')">בטל</button>
                         </div>
                     </div>
@@ -202,12 +222,14 @@
         const db = getFirestore(app);
 
         let currentUserData = null;
-        
-        // מטמון (Cache) של המדריך כדי לאפשר מיון ללא טעינה מחדש משרת
         let currentGroupId = null;
         let currentSessionId = null;
         let cachedSessions = [];
         let cachedStudents = [];
+        
+        // משתני עזר לעריכה ידנית
+        let currentEditUid = null;
+        let currentEditName = null;
 
         const views = { auth: document.getElementById('view-auth'), student: document.getElementById('view-student'), instructor: document.getElementById('view-instructor'), admin: document.getElementById('view-admin') };
 
@@ -235,16 +257,13 @@
             } else switchView('auth');
         });
 
-        // חישוב מרחק 
         function getDistanceFromLatLonInM(lat1, lon1, lat2, lon2) {
             const R = 6371e3; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
             return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))); 
         }
 
-        // ==========================================
-        // === לוגיקת מדריך (Instructor) מורחבת ===
-        // ==========================================
+        // === לוגיקת מדריך ===
 
         document.getElementById('btn-new-group').addEventListener('click', async () => {
             const name = prompt("הכנס שם לקבוצה:");
@@ -263,7 +282,7 @@
         window.backToGroupDetails = () => {
             document.getElementById('instructor-session-details').classList.add('hidden');
             document.getElementById('instructor-group-details').classList.remove('hidden');
-            window.openGroupDetails(currentGroupId, document.getElementById('group-title-display').innerText); // מרענן נתונים כשהוא חוזר
+            window.openGroupDetails(currentGroupId, document.getElementById('group-title-display').innerText);
         };
 
         async function loadInstructorGroups() {
@@ -280,7 +299,6 @@
             });
         }
 
-        // פתיחת קבוצה מורחבת ושאיבת נתונים למטמון
         window.openGroupDetails = async (groupId, groupName) => {
             currentGroupId = groupId;
             document.getElementById('instructor-main').classList.add('hidden');
@@ -292,13 +310,11 @@
             const groupSnap = await getDoc(doc(db, "groups", groupId));
             const groupData = groupSnap.data();
 
-            // טעינת מפגשים
             const sessionsQ = query(collection(db, "groups", groupId, "sessions"));
             const sessionsSnap = await getDocs(sessionsQ);
             cachedSessions = sessionsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             window.renderSessions();
 
-            // טעינת חניכים
             document.getElementById('group-students-list').innerHTML = "טוען חניכים...";
             cachedStudents = [];
             if (groupData.members && groupData.members.length > 0) {
@@ -306,18 +322,11 @@
                     const uSnap = await getDoc(doc(db, "users", uid));
                     if(uSnap.exists()) {
                         const sData = uSnap.data();
-                        
-                        // חישוב אחוזי נוכחות לחניך זה
                         let attendedCount = 0;
                         let totalCount = cachedSessions.length;
-                        
                         cachedSessions.forEach(session => {
-                            // גם 'on_time' וגם 'late' נחשבים כנוכחות בחישוב האחוז הכללי.
-                            if (session.attendance && session.attendance[uid]) {
-                                attendedCount++;
-                            }
+                            if (session.attendance && session.attendance[uid]) attendedCount++;
                         });
-
                         let percentage = totalCount === 0 ? null : Math.round((attendedCount / totalCount) * 100);
                         cachedStudents.push({ uid, name: sData.fullName, percentage });
                     }
@@ -326,30 +335,31 @@
             window.renderStudents();
         };
 
-        // הצגת טופס פתיחת מפגש עם הצעה למספר ושעה
         document.getElementById('btn-show-session-form').addEventListener('click', () => {
             document.getElementById('new-session-form').classList.remove('hidden');
-            
-            // מציאת המספר הבא
             let maxNum = 0;
             cachedSessions.forEach(s => { if(Number(s.sessionNumber) > maxNum) maxNum = Number(s.sessionNumber); });
             document.getElementById('ns-number').value = maxNum + 1;
-
-            // שעה נוכחית בברירת מחדל
             const now = new Date();
             document.getElementById('ns-time').value = now.toTimeString().slice(0,5);
         });
 
-        // יצירת המפגש בפועל
-        window.submitNewSession = () => {
+        // יצירת מפגש עם חיווי דגימה
+        window.submitNewSession = (e) => {
             const num = document.getElementById('ns-number').value;
             const time = document.getElementById('ns-time').value;
+            const btn = e.target;
+            const originalText = btn.innerText;
 
             if(!num || !time) return alert("חובה להזין מספר ושעה.");
             if(cachedSessions.some(s => s.sessionNumber == num)) return alert("שגיאה: מפגש עם מספר זה כבר קיים!");
 
             if (!navigator.geolocation) return alert("הדפדפן לא תומך במיקום");
-            alert("דוגם מיקום... ודא שירותי GPS פועלים.");
+            
+            // עדכון חזותי לכפתור
+            btn.disabled = true;
+            btn.classList.add('sampling');
+            btn.innerText = "דוגם מיקום נא להמתין...";
 
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 await addDoc(collection(db, "groups", currentGroupId, "sessions"), {
@@ -359,21 +369,26 @@
                     instructorLocation: { lat: pos.coords.latitude, lng: pos.coords.longitude },
                     status: 'open', attendance: {}, exceptions: {}
                 });
+                btn.disabled = false;
+                btn.classList.remove('sampling');
+                btn.innerText = originalText;
                 alert("המפגש נפתח בהצלחה!");
                 window.openGroupDetails(currentGroupId, document.getElementById('group-title-display').innerText);
-            }, (err) => alert("חובה לאשר מיקום"), { enableHighAccuracy: true });
+            }, (err) => {
+                btn.disabled = false;
+                btn.classList.remove('sampling');
+                btn.innerText = originalText;
+                alert("חובה לאשר מיקום");
+            }, { enableHighAccuracy: true });
         };
 
-        // רינדור רשימת המפגשים עם אפשרות מיון
         window.renderSessions = () => {
-            const sortOrder = document.getElementById('sort-sessions').value; // 'asc' | 'desc'
+            const sortOrder = document.getElementById('sort-sessions').value;
             let sorted = [...cachedSessions].sort((a,b) => {
                 return sortOrder === 'asc' ? a.sessionNumber - b.sessionNumber : b.sessionNumber - a.sessionNumber;
             });
-
             const container = document.getElementById('group-sessions-list');
             container.innerHTML = sorted.length ? "" : "<p>אין מפגשים. פתח חדש.</p>";
-            
             sorted.forEach(sData => {
                 const div = document.createElement('div');
                 div.className = "card clickable-card mt-10"; div.style.padding = "10px";
@@ -383,40 +398,33 @@
             });
         };
 
-        // הוספת חניך ידנית לפי ת"ז
         window.addStudentByTz = async () => {
             const tz = prompt("הכנס תעודת זהות של החניך לצירוף:");
             if (!tz) return;
             try {
                 const q = query(collection(db, "users"), where("tz", "==", tz));
                 const snaps = await getDocs(q);
-                if(snaps.empty) return alert("לא נמצא חניך עם ת.ז. זו במערכת. עליו להירשם תחילה.");
-                
+                if(snaps.empty) return alert("לא נמצא חניך עם ת.ז. זו במערכת.");
                 const studentDoc = snaps.docs[0];
                 await updateDoc(doc(db, "groups", currentGroupId), { members: arrayUnion(studentDoc.id) });
                 alert("החניך צורף בהצלחה!");
                 window.openGroupDetails(currentGroupId, document.getElementById('group-title-display').innerText);
-            } catch(e) { alert("שגיאה בחיפוש או צירוף."); }
+            } catch(e) { alert("שגיאה בצירוף."); }
         };
 
-        // רינדור רשימת החניכים בקבוצה עם מיון
         window.renderStudents = () => {
             const sortBy = document.getElementById('sort-students').value;
             let sorted = [...cachedStudents];
-
             sorted.sort((a, b) => {
                 if (sortBy === 'name_asc') return a.name.localeCompare(b.name, 'he');
                 if (sortBy === 'name_desc') return b.name.localeCompare(a.name, 'he');
-                
                 let pctA = a.percentage === null ? -1 : a.percentage;
                 let pctB = b.percentage === null ? -1 : b.percentage;
                 if (sortBy === 'pct_asc') return pctA - pctB;
                 if (sortBy === 'pct_desc') return pctB - pctA;
             });
-
             const container = document.getElementById('group-students-list');
             container.innerHTML = sorted.length ? "" : "<p>טרם נרשמו חניכים.</p>";
-
             sorted.forEach(s => {
                 let colorClass = 'text-gray'; let pctText = 'אין נתונים';
                 if (s.percentage !== null) {
@@ -425,88 +433,67 @@
                     else if (s.percentage >= 80) colorClass = 'text-yellow';
                     else colorClass = 'text-red';
                 }
-
-                container.innerHTML += `
-                    <div class="list-item" style="cursor:default;">
-                        <span>👤 ${s.name}</span> 
-                        <span class="${colorClass}" style="font-size:0.9rem;">נוכחות: ${pctText}</span>
-                    </div>`;
+                container.innerHTML += `<div class="list-item" style="cursor:default;"><span>👤 ${s.name}</span> <span class="${colorClass}" style="font-size:0.9rem;">נוכחות: ${pctText}</span></div>`;
             });
         };
 
-        // פתיחת דוח מפגש (רשימת נוכחות צבעונית)
         window.openSessionDetails = async (sessionId, sessionNumber, sessionData) => {
             currentSessionId = sessionId;
             document.getElementById('instructor-group-details').classList.add('hidden');
             document.getElementById('instructor-session-details').classList.remove('hidden');
             document.getElementById('session-title-display').innerText = `דוח נוכחות - מפגש ${sessionNumber}`;
-
             renderAttendanceList(sessionData);
         };
 
         function renderAttendanceList(sessionData) {
             const container = document.getElementById('session-attendance-list');
             container.innerHTML = "";
-
             const attendance = sessionData.attendance || {};
             const exceptions = sessionData.exceptions || {};
-
             cachedStudents.forEach(student => {
-                let statusClass = "bg-red";
-                let statusText = "חסר";
-                
+                let statusClass = "bg-red"; let statusText = "חסר";
                 if (attendance[student.uid]) {
-                    if (attendance[student.uid].status === 'late') {
-                        statusClass = "bg-yellow"; statusText = "איחור";
-                    } else {
-                        statusClass = "bg-green"; statusText = "נוכח";
-                    }
-                } else if (exceptions[student.uid]) {
-                    statusClass = "bg-orange"; statusText = "חריג מיקום";
-                }
-
+                    if (attendance[student.uid].status === 'late') { statusClass = "bg-yellow"; statusText = "איחור"; }
+                    else { statusClass = "bg-green"; statusText = "נוכח"; }
+                } else if (exceptions[student.uid]) { statusClass = "bg-orange"; statusText = "חריג מיקום"; }
                 const div = document.createElement('div');
                 div.className = `list-item ${statusClass}`;
                 div.innerHTML = `<span>👤 ${student.name}</span> <strong>${statusText}</strong>`;
-                
-                // לחיצה על חניך מפעילה עריכה ידנית
                 div.onclick = () => window.editStudentAttendance(student.uid, student.name);
                 container.appendChild(div);
             });
         }
 
-        // עריכת נוכחות ידנית על ידי מדריך בחלון המפגש
-        window.editStudentAttendance = async (uid, name) => {
-            const choice = prompt(`עריכת נוכחות עבור ${name}:\nהקש 1 - לסימון נוכח\nהקש 2 - לסימון איחור\nהקש 3 - לסימון חסר (ביטול)`);
-            if(!choice) return;
+        // עריכה ידנית עם מודאל נגיש
+        window.editStudentAttendance = (uid, name) => {
+            currentEditUid = uid;
+            currentEditName = name;
+            document.getElementById('modal-student-name').innerText = `עריכת נוכחות: ${name}`;
+            document.getElementById('edit-attendance-modal').classList.remove('hidden');
+        };
 
+        window.processManualEdit = async (choice) => {
             const sessionRef = doc(db, "groups", currentGroupId, "sessions", currentSessionId);
+            document.getElementById('edit-attendance-modal').classList.add('hidden');
             
             try {
-                if (choice === '3') { // חסר
-                    await updateDoc(sessionRef, { [`attendance.${uid}`]: deleteField(), [`exceptions.${uid}`]: deleteField() });
+                if (choice === '3') {
+                    await updateDoc(sessionRef, { [`attendance.${currentEditUid}`]: deleteField(), [`exceptions.${currentEditUid}`]: deleteField() });
                 } else if (choice === '1' || choice === '2') {
                     const finalStatus = choice === '1' ? 'on_time' : 'late';
                     await updateDoc(sessionRef, {
-                        [`attendance.${uid}`]: { name: name, status: finalStatus, timestamp: new Date(), byInstructor: true },
-                        [`exceptions.${uid}`]: deleteField()
+                        [`attendance.${currentEditUid}`]: { name: currentEditName, status: finalStatus, timestamp: new Date(), byInstructor: true },
+                        [`exceptions.${currentEditUid}`]: deleteField()
                     });
-                } else return alert("בחירה לא חוקית");
-
-                // רענון מיידי
+                }
                 const updatedSession = await getDoc(sessionRef);
-                
-                // עדכון במטמון כדי שישתקף גם כשחוזרים אחורה למסך הקבוצה
-                const sessionIndex = cachedSessions.findIndex(s => s.id === currentSessionId);
-                if(sessionIndex !== -1) cachedSessions[sessionIndex] = { id: currentSessionId, ...updatedSession.data() };
-
+                const idx = cachedSessions.findIndex(s => s.id === currentSessionId);
+                if(idx !== -1) cachedSessions[idx] = { id: currentSessionId, ...updatedSession.data() };
                 renderAttendanceList(updatedSession.data());
-            } catch(e) { alert("שגיאה בעדכון הנוכחות."); }
+            } catch(e) { alert("שגיאה בעדכון."); }
         };
 
-        // ==========================================
-        // === לוגיקת תלמיד (Student) כולל בדיקת איחור
-        // ==========================================
+        // === לוגיקת תלמיד ===
         
         window.joinGroup = async () => {
             const groupId = prompt("הכנס מזהה קבוצה:");
@@ -516,90 +503,82 @@
                 const groupSnap = await getDoc(groupRef);
                 if (!groupSnap.exists()) return alert("קבוצה לא קיימת");
                 await updateDoc(groupRef, { members: arrayUnion(auth.currentUser.uid) });
-                alert("צורפת לקבוצה בהצלחה!"); loadStudentDashboard();
+                alert("צורפת בהצלחה!"); loadStudentDashboard();
             } catch (e) { alert("שגיאה בצירוף"); }
         };
 
-        window.markAttendance = (groupId, sessionId, instLat, instLng, expectedStartTime) => {
+        window.markAttendance = (groupId, sessionId, instLat, instLng, expectedStartTime, e) => {
             if (!navigator.geolocation) return alert("אין תמיכה במיקום");
-            alert("דוגם מיקום, אנא המתן...");
+            const btn = e.target;
+            const originalText = btn.innerText;
+
+            btn.disabled = true;
+            btn.classList.add('sampling');
+            btn.innerText = "דוגם מיקום נא להמתין...";
             
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const distance = getDistanceFromLatLonInM(instLat, instLng, pos.coords.latitude, pos.coords.longitude);
                 const sessionRef = doc(db, "groups", groupId, "sessions", sessionId);
-
-                // --- חישוב איחור (10 דקות חסד) ---
                 let attendStatus = 'on_time';
                 if (expectedStartTime) {
                     const [hours, mins] = expectedStartTime.split(':').map(Number);
                     const expectedDate = new Date();
                     expectedDate.setHours(hours, mins, 0, 0);
-                    const graceDate = new Date(expectedDate.getTime() + 10 * 60000); // מוסיף 10 דקות
-                    
-                    if (new Date() > graceDate) {
-                        attendStatus = 'late';
-                    }
+                    const graceDate = new Date(expectedDate.getTime() + 10 * 60000);
+                    if (new Date() > graceDate) attendStatus = 'late';
                 }
 
                 try {
                     if (distance <= 70) {
                         await updateDoc(sessionRef, {
-                            [`attendance.${auth.currentUser.uid}`]: {
-                                name: currentUserData.fullName,
-                                status: attendStatus,
-                                timestamp: serverTimestamp(),
-                                distanceMeters: Math.round(distance)
-                            }
+                            [`attendance.${auth.currentUser.uid}`]: { name: currentUserData.fullName, status: attendStatus, timestamp: serverTimestamp(), distanceMeters: Math.round(distance) }
                         });
-                        let msg = attendStatus === 'late' ? "נקלט בהצלחה (באיחור)." : "הרישום נקלט בהצלחה ובזמן!";
-                        alert(`${msg} מרחק מהמדריך: ${Math.round(distance)} מטרים.`);
+                        alert(attendStatus === 'late' ? "נקלט באיחור." : "נקלט בהצלחה ובזמן!");
                     } else {
                         await updateDoc(sessionRef, {
-                            [`exceptions.${auth.currentUser.uid}`]: {
-                                name: currentUserData.fullName, status: 'pending', timestamp: serverTimestamp(), distanceMeters: Math.round(distance)
-                            }
+                            [`exceptions.${auth.currentUser.uid}`]: { name: currentUserData.fullName, status: 'pending', timestamp: serverTimestamp(), distanceMeters: Math.round(distance) }
                         });
-                        alert(`הינך מחוץ לטווח (${Math.round(distance)} מטרים). נשלח כחריג.`);
+                        alert(`מחוץ לטווח (${Math.round(distance)} מ'). נשלח כחריג.`);
                     }
                     loadStudentDashboard();
                 } catch(e) { alert("שגיאה ברישום."); }
-            }, (err) => alert("שגיאה ב-GPS"), { enableHighAccuracy: true });
+                
+                btn.disabled = false;
+                btn.classList.remove('sampling');
+                btn.innerText = originalText;
+            }, (err) => {
+                btn.disabled = false;
+                btn.classList.remove('sampling');
+                btn.innerText = originalText;
+                alert("שגיאה ב-GPS");
+            }, { enableHighAccuracy: true });
         };
 
         async function loadStudentDashboard() {
             const container = document.getElementById('student-courses-list');
             container.innerHTML = `<button class="secondary mb-10" onclick="window.joinGroup()">➕ הצטרף לקבוצה חדשה</button><div id="courses-wrapper">טוען קורסים...</div>`;
             const wrapper = document.getElementById('courses-wrapper');
-            
             try {
                 const q = query(collection(db, "groups"), where("members", "array-contains", auth.currentUser.uid));
                 const querySnapshot = await getDocs(q);
                 if(querySnapshot.empty) return wrapper.innerHTML = "אינך רשום לאף קבוצה.";
-                
                 wrapper.innerHTML = ""; 
                 for (const docSnap of querySnapshot.docs) {
                     const group = docSnap.data();
-                    const groupId = docSnap.id;
-                    const sessionsQ = query(collection(db, "groups", groupId, "sessions"), where("status", "==", "open"));
+                    const sessionsQ = query(collection(db, "groups", docSnap.id, "sessions"), where("status", "==", "open"));
                     const sessionsSnap = await getDocs(sessionsQ);
-                    
                     let statusHtml = `<span class="status-badge status-closed">אין רישום פעיל</span>`;
                     let buttonHtml = '';
-
                     if (!sessionsSnap.empty) {
                         const activeSessionDoc = sessionsSnap.docs[0];
                         const activeSession = activeSessionDoc.data();
                         const hasAttended = (activeSession.attendance && activeSession.attendance[auth.currentUser.uid]) || (activeSession.exceptions && activeSession.exceptions[auth.currentUser.uid]);
-
-                        if (hasAttended) {
-                            statusHtml = `<span class="status-badge status-open" style="background-color: var(--dark-blue);">כבר דיווחת נוכחות</span>`;
-                        } else {
-                            statusHtml = `<span class="status-badge status-open">מפגש ${activeSession.sessionNumber} פתוח (התחלה: ${activeSession.expectedStartTime})</span>`;
-                            // העברת שעת ההתחלה לפונקציה כדי לבדוק איחור מול שעון התלמיד
-                            buttonHtml = `<button class="success mt-10" onclick="window.markAttendance('${groupId}', '${activeSessionDoc.id}', ${activeSession.instructorLocation.lat}, ${activeSession.instructorLocation.lng}, '${activeSession.expectedStartTime}')">אני בשיעור (דגום מיקום)</button>`;
+                        if (hasAttended) { statusHtml = `<span class="status-badge status-open" style="background-color: var(--dark-blue);">כבר דיווחת נוכחות</span>`; }
+                        else {
+                            statusHtml = `<span class="status-badge status-open">מפגש ${activeSession.sessionNumber} פתוח</span>`;
+                            buttonHtml = `<button class="success mt-10" onclick="window.markAttendance('${docSnap.id}', '${activeSessionDoc.id}', ${activeSession.instructorLocation.lat}, ${activeSession.instructorLocation.lng}, '${activeSession.expectedStartTime}', event)">אני בשיעור (דגום מיקום)</button>`;
                         }
                     }
-
                     const div = document.createElement('div');
                     div.style = "border: 1px solid #ccc; padding: 10px; border-radius: 4px; margin-bottom: 10px;";
                     div.innerHTML = `<strong>${group.name}</strong><br>סטטוס: ${statusHtml}${buttonHtml}`;
