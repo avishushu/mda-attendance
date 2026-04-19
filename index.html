@@ -9,26 +9,29 @@
         :root {
             --primary-red: #d32f2f; --dark-blue: #1a237e; --light-gray: #f5f5f5;
             --white: #ffffff; --success-green: #2e7d32; --warning-orange: #ed6c02;
-            --danger-red: #c62828; --late-yellow: #fbc02d;
+            --danger-red: #c62828; --late-yellow: #fbc02d; --muted-red: #ffebee;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Heebo', sans-serif; }
-        body { background-color: var(--light-gray); color: #212121; display: flex; flex-direction: column; min-height: 100vh; }
+        body { background-color: var(--light-gray); color: #212121; display: flex; flex-direction: column; min-height: 100vh; padding-top: 60px; }
 
-        header { background-color: var(--dark-blue); color: var(--white); padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1000; }
+        /* Header קבוע למניעת חיתוך תפריט */
+        header { 
+            background-color: var(--dark-blue); color: var(--white); 
+            padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; 
+            position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 10001; 
+        }
         main { flex: 1; padding: 15px; max-width: 800px; margin: 0 auto; width: 100%; }
 
-        /* תפריט פרופיל */
-        .profile-area { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .profile-area { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: 20px; }
         .dropdown-menu { 
-            position: absolute; top: 100%; left: 0; background: white; color: black; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2); border-radius: 8px; width: 180px; 
-            margin-top: 10px; overflow: hidden; display: none; 
+            position: absolute; top: 50px; left: 10px; background: white; color: black; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2); border-radius: 12px; width: 200px; 
+            display: none; z-index: 10002; overflow: hidden;
         }
         .dropdown-menu.show { display: block; }
-        .dropdown-item { padding: 12px; border-bottom: 1px solid #eee; transition: 0.2s; font-size: 0.9rem; }
-        .dropdown-item:hover { background: #f5f5f5; }
-        .dropdown-item:last-child { border-bottom: none; color: var(--danger-red); }
+        .dropdown-item { padding: 12px 15px; border-bottom: 1px solid #eee; transition: 0.2s; font-size: 0.95rem; text-align: right; }
+        .dropdown-item:hover { background: #f0f2ff; }
 
         .card { background: var(--white); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .clickable { cursor: pointer; transition: 0.2s; }
@@ -37,35 +40,43 @@
         h2 { color: var(--dark-blue); margin-bottom: 15px; border-bottom: 3px solid var(--primary-red); display: inline-block; padding-bottom: 5px; }
         
         input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; margin-bottom: 10px; }
+        input:disabled { background: #f1f1f1; border-color: #ddd; color: #666; }
+        
         button { background-color: var(--primary-red); color: var(--white); border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; font-weight: bold; }
         button.secondary { background-color: var(--dark-blue); }
         button.outline { background: none; border: 1px solid var(--dark-blue); color: var(--dark-blue); }
-        
-        .active-alert { background: #fff3e0; border: 2px solid var(--warning-orange); padding: 15px; border-radius: 12px; margin-bottom: 15px; }
-        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+        button.muted { background-color: #757575; }
 
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; margin-bottom: 4px; border-radius: 8px; }
+        
+        /* צבעים וסטטוסים */
         .status-tag { padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; color: white; font-weight: bold; }
         .bg-green { background: var(--success-green); }
         .bg-red { background: var(--danger-red); }
         .bg-yellow { background: var(--late-yellow); color: black; }
+        .bg-absent { background: var(--muted-red); color: #c62828; } /* חסר - טרם הגיע */
+        
+        @keyframes blinker { 50% { opacity: 0.4; } }
+        .bg-blink-orange { background-color: #ffe0b2; border: 2px solid var(--warning-orange); animation: blinker 1.5s linear infinite; }
+        .bg-snoozed { background-color: #eeeeee; border-right: 4px solid #9e9e9e; opacity: 0.8; }
 
         .hidden { display: none !important; }
-        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:9999; }
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:20000; }
     </style>
 </head>
 <body>
 
     <header id="app-header" class="hidden">
         <div class="profile-area" onclick="window.toggleDropdown(event)">
-            <span id="user-display-name">משתמש</span>
-            <span>▼</span>
+            <span id="user-display-name">...</span>
+            <span style="font-size: 0.7rem;">▼</span>
             <div id="profile-dropdown" class="dropdown-menu">
                 <div class="dropdown-item" onclick="window.showProfileModal()">👤 פרטים אישיים</div>
                 <div class="dropdown-item" onclick="window.showPasswordModal()">🔑 שינוי סיסמה</div>
-                <div class="dropdown-item" onclick="window.handleLogout()">🚪 יציאה מהמערכת</div>
+                <div class="dropdown-item" onclick="window.handleLogout()">🚪 יציאה</div>
             </div>
         </div>
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Magen_David_Adom_Logo.svg/1200px-Magen_David_Adom_Logo.svg.png" alt="MDA" style="height: 30px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Magen_David_Adom_Logo.svg/1200px-Magen_David_Adom_Logo.svg.png" alt="MDA" style="height: 35px;">
     </header>
 
     <main>
@@ -83,14 +94,12 @@
             <div id="student-main-list">
                 <div class="card">
                     <h2>הקורסים שלי</h2>
-                    <button class="outline" style="margin-bottom: 10px;" onclick="window.joinNewGroup()">➕ הצטרף לקורס חדש</button>
                     <div id="student-groups-container"></div>
                 </div>
             </div>
-            
             <div id="student-history-view" class="hidden">
                 <div class="card">
-                    <button class="outline" style="width: auto; margin-bottom: 15px;" onclick="window.backToStudentMain()">🔙 חזור לקורסים שלי</button>
+                    <button class="outline" style="width: auto; margin-bottom: 15px;" onclick="window.backToStudentMain()">🔙 חזור</button>
                     <h2 id="history-title">היסטוריה</h2>
                     <div id="history-container"></div>
                 </div>
@@ -98,38 +107,60 @@
         </section>
 
         <section id="view-instructor" class="hidden">
-            <div class="card">
-                <h2>ניהול מדריך</h2>
-                <div id="instructor-groups-container"></div>
+            <div id="instructor-main">
+                <div class="card">
+                    <h2>הקבוצות שלי</h2>
+                    <div id="instructor-groups-container"></div>
+                </div>
+            </div>
+            <div id="instructor-group-details" class="hidden">
+                <div class="card">
+                    <button class="outline" style="width: auto; margin-bottom: 10px;" onclick="window.backToInstructorMain()">🔙 חזור</button>
+                    <h2 id="group-name-header">שם הקבוצה</h2>
+                    <div id="instructor-sessions-list"></div>
+                    <button class="secondary mt-10" onclick="window.openNewSessionForm()">➕ פתח מפגש חדש</button>
+                </div>
+            </div>
+            <div id="session-report-view" class="hidden">
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <button class="outline" style="width: auto;" onclick="window.backToGroupDetails()">🔙 חזור</button>
+                        <button id="btn-lock" style="width: auto; background: black;" onclick="window.manualLock()">🔒 סגור רישום</button>
+                    </div>
+                    <h2 id="report-title">דוח נוכחות</h2>
+                    <div id="report-container"></div>
+                </div>
             </div>
         </section>
     </main>
 
     <div id="profile-modal" class="modal-overlay hidden">
         <div class="card" style="width: 90%; max-width: 400px;">
-            <h3>עדכון פרטים</h3>
-            <label>שם מלא:</label>
-            <input type="text" id="edit-full-name">
-            <label>תעודת זהות:</label>
-            <input type="text" id="edit-tz" readonly style="background: #eee;">
-            <button onclick="window.saveProfile()">שמור שינויים</button>
-            <button class="outline" style="margin-top: 10px;" onclick="window.closeModals()">ביטול</button>
+            <h3>פרטים אישיים</h3>
+            <label>שם מלא:</label><input type="text" id="prof-name" disabled>
+            <label>תעודת זהות:</label><input type="text" id="prof-tz" disabled>
+            <button onclick="window.closeModals()">סגור</button>
         </div>
     </div>
 
-    <div id="password-modal" class="modal-overlay hidden">
-        <div class="card" style="width: 90%; max-width: 400px;">
-            <h3>שינוי סיסמה</h3>
-            <input type="password" id="new-pw" placeholder="סיסמה חדשה (מינימום 6 תווים)">
-            <button onclick="window.updatePassword()">עדכן סיסמה</button>
-            <button class="outline" style="margin-top: 10px;" onclick="window.closeModals()">ביטול</button>
+    <div id="edit-modal" class="modal-overlay hidden">
+        <div class="card" style="width: 90%; max-width: 350px;">
+            <h3 id="edit-name">עריכת חניך</h3>
+            <p id="edit-info" style="margin-bottom: 15px; font-size: 0.9rem;"></p>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <button class="bg-green" onclick="window.updateStatus('on_time')">נוכח ✅</button>
+                <button class="bg-yellow" onclick="window.updateStatus('late')">איחור ⏰</button>
+                <button class="muted" id="btn-snooze" onclick="window.snoozeException()">טיפול בהמשך ⏳</button>
+                <button class="bg-red" onclick="window.updateStatus('absent')">חסר / דחה חריג ❌</button>
+                <button class="outline" onclick="window.closeModals()">ביטול</button>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, updateDoc, query, where, getDocs, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, collection, addDoc, query, where, getDocs, updateDoc, deleteField, orderBy, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE", authDomain: "attendancemda.firebaseapp.com",
@@ -141,49 +172,18 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        let userData = null;
+        let userData = null, curGroupId = null, curSessionId = null, curEditUid = null;
+        let liveUnsubscribe = null, membersCache = [];
 
-        // ניהול תפריט משתמש
-        window.toggleDropdown = (e) => {
-            e.stopPropagation();
-            document.getElementById('profile-dropdown').classList.toggle('show');
-        };
-
+        // תפריט
+        window.toggleDropdown = (e) => { e.stopPropagation(); document.getElementById('profile-dropdown').classList.toggle('show'); };
         window.onclick = () => document.getElementById('profile-dropdown').classList.remove('show');
-
-        // מודלים
-        window.showProfileModal = () => {
-            document.getElementById('edit-full-name').value = userData.fullName;
-            document.getElementById('edit-tz').value = userData.idNumber || 'לא הוזן';
-            document.getElementById('profile-modal').classList.remove('hidden');
-        };
-
-        window.showPasswordModal = () => document.getElementById('password-modal').classList.remove('hidden');
         window.closeModals = () => document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
 
-        window.saveProfile = async () => {
-            const newName = document.getElementById('edit-full-name').value;
-            if(!newName) return;
-            await updateDoc(doc(db, "users", auth.currentUser.uid), { fullName: newName });
-            alert("הפרטים עודכנו!");
-            location.reload();
-        };
-
-        window.updatePassword = async () => {
-            const newPw = document.getElementById('new-pw').value;
-            if(newPw.length < 6) return alert("סיסמה קצרה מדי");
-            try {
-                await updatePassword(auth.currentUser, newPw);
-                alert("הסיסמה עודכנה בהצלחה!");
-                window.closeModals();
-            } catch (e) { alert("שגיאה. ייתכן שנדרש התחברות מחדש לפני שינוי סיסמה."); }
-        };
-
-        // לוגיקת ניווט תלמיד
-        window.backToStudentMain = () => {
-            document.getElementById('student-history-view').classList.add('hidden');
-            document.getElementById('student-main-list').classList.remove('hidden');
-            window.loadStudentMain();
+        window.showProfileModal = () => {
+            document.getElementById('prof-name').value = userData.fullName;
+            document.getElementById('prof-tz').value = userData.idNumber || 'לא צוין';
+            document.getElementById('profile-modal').classList.remove('hidden');
         };
 
         onAuthStateChanged(auth, async (user) => {
@@ -194,7 +194,7 @@
                     document.getElementById('user-display-name').innerText = userData.fullName;
                     document.getElementById('app-header').classList.remove('hidden');
                     document.getElementById('view-auth').classList.add('hidden');
-                    userData.role === 'instructor' ? showInstructor() : window.loadStudentMain();
+                    userData.role === 'instructor' ? showInstructor() : showStudent();
                 }
             } else {
                 document.getElementById('app-header').classList.add('hidden');
@@ -202,50 +202,182 @@
             }
         });
 
-        window.loadStudentMain = async () => {
-            document.getElementById('view-student').classList.remove('hidden');
-            const groupCont = document.getElementById('student-groups-container');
-            groupCont.innerHTML = "טוען קורסים...";
-            const snaps = await getDocs(query(collection(db, "groups"), where("members", "array-contains", auth.currentUser.uid)));
-            groupCont.innerHTML = snaps.empty ? "לא נמצאו קורסים." : "";
-            snaps.forEach(gd => {
-                const div = document.createElement('div');
-                div.className = "card clickable";
-                div.innerHTML = `<strong>${gd.data().name}</strong><br><small>לחץ לפירוט והיסטוריה</small>`;
-                div.onclick = () => window.openHistory(gd.id, gd.data().name);
-                groupCont.appendChild(div);
+        // לוגיקת מדריך
+        function showInstructor() {
+            document.getElementById('view-instructor').classList.remove('hidden');
+            window.loadInstructorMain();
+        }
+
+        window.loadInstructorMain = async () => {
+            const cont = document.getElementById('instructor-groups-container');
+            const snaps = await getDocs(query(collection(db, "groups"), where("instructorId", "==", auth.currentUser.uid)));
+            cont.innerHTML = "";
+            snaps.forEach(d => {
+                const div = document.createElement('div'); div.className="card clickable";
+                div.innerHTML = `<strong>${d.data().name}</strong>`;
+                div.onclick = () => window.openGroup(d.id, d.data().name);
+                cont.appendChild(div);
             });
         };
 
-        window.openHistory = async (gid, gname) => {
-            document.getElementById('student-main-list').classList.add('hidden');
-            document.getElementById('student-history-view').classList.remove('hidden');
-            document.getElementById('history-title').innerText = gname;
-            const hCont = document.getElementById('history-container');
-            hCont.innerHTML = "טוען היסטוריה...";
-            const snaps = await getDocs(query(collection(db, "groups", gid, "sessions"), orderBy("sessionNumber", "desc")));
-            hCont.innerHTML = snaps.empty ? "אין מפגשים מוקלטים." : "";
-            snaps.forEach(sd => {
+        window.openGroup = async (id, name) => {
+            curGroupId = id;
+            document.getElementById('instructor-main').classList.add('hidden');
+            document.getElementById('instructor-group-details').classList.remove('hidden');
+            document.getElementById('group-name-header').innerText = name;
+            
+            const sSnaps = await getDocs(query(collection(db, "groups", id, "sessions"), orderBy("sessionNumber", "desc")));
+            const sList = document.getElementById('instructor-sessions-list');
+            sList.innerHTML = "";
+            sSnaps.forEach(sd => {
                 const s = sd.data();
-                const att = s.attendance?.[auth.currentUser.uid];
-                let res = "חסר", cls = "bg-red";
-                if(att) { res = att.status === 'late' ? "איחור" : "נוכח"; cls = att.status === 'late' ? "bg-yellow" : "bg-green"; }
-                hCont.innerHTML += `<div class="list-item"><span>מפגש ${s.sessionNumber}</span><span class="status-tag ${cls}">${res}</span></div>`;
+                sList.innerHTML += `<div class="list-item clickable" onclick="window.openReportLive('${sd.id}', ${s.sessionNumber}, '${s.status}')">
+                    <span>מפגש ${s.sessionNumber}</span>
+                    <span class="status-tag ${s.status==='open'?'bg-green':'bg-red'}">${s.status==='open'?'פתוח':'סגור'}</span>
+                </div>`;
+            });
+
+            membersCache = [];
+            const gDoc = await getDoc(doc(db, "groups", id));
+            for(let uid of (gDoc.data().members || [])) {
+                const u = await getDoc(doc(db, "users", uid));
+                if(u.exists()) membersCache.push({uid, name: u.data().fullName});
+            }
+        };
+
+        window.openReportLive = (sid, snum, status) => {
+            curSessionId = sid;
+            document.getElementById('instructor-group-details').classList.add('hidden');
+            document.getElementById('session-report-view').classList.remove('hidden');
+            document.getElementById('report-title').innerText = `מפגש ${snum}`;
+            document.getElementById('btn-lock').classList.toggle('hidden', status !== 'open');
+            if(liveUnsubscribe) liveUnsubscribe();
+            liveUnsubscribe = onSnapshot(doc(db, "groups", curGroupId, "sessions", sid), (snap) => {
+                if(snap.exists()) renderReport(snap.data());
             });
         };
 
+        function renderReport(sdata) {
+            const container = document.getElementById('report-container');
+            container.innerHTML = "";
+            
+            // מיון: חריגים מהבהבים ראשונים -> נוכחים -> טיפול בהמשך/חסרים
+            const sortedMembers = [...membersCache].sort((a, b) => {
+                const excA = sdata.exceptions?.[a.uid];
+                const excB = sdata.exceptions?.[b.uid];
+                const isPendingA = excA?.status === 'pending' && !excA?.snoozed;
+                const isPendingB = excB?.status === 'pending' && !excB?.snoozed;
+                if (isPendingA && !isPendingB) return -1;
+                if (!isPendingA && isPendingB) return 1;
+                return 0;
+            });
+
+            sortedMembers.forEach(student => {
+                const att = sdata.attendance?.[student.uid];
+                const exc = sdata.exceptions?.[student.uid];
+                let statusText = "טרם הגיע", cls = "bg-absent", info = "";
+
+                if (exc?.status === 'pending') {
+                    if (exc.snoozed) {
+                        statusText = "ממתין לטיפול ⏳"; cls = "bg-snoozed";
+                    } else {
+                        statusText = `📍 חריג (${exc.distance}מ')`; cls = "bg-blink-orange";
+                    }
+                    info = `מרחק: ${exc.distance} מטרים.`;
+                } else if (att) {
+                    statusText = att.status === 'late' ? "⏰ איחור" : "✅ נוכח";
+                    cls = att.status === 'late' ? "bg-yellow" : "bg-green";
+                }
+
+                const div = document.createElement('div');
+                div.className = `list-item clickable ${cls}`;
+                div.innerHTML = `<span>${student.name}</span> <strong>${statusText}</strong>`;
+                div.onclick = () => {
+                    curEditUid = student.uid;
+                    document.getElementById('edit-name').innerText = student.name;
+                    document.getElementById('edit-info').innerText = info;
+                    document.getElementById('btn-snooze').classList.toggle('hidden', !exc || exc.snoozed);
+                    document.getElementById('edit-modal').classList.remove('hidden');
+                };
+                container.appendChild(div);
+            });
+        }
+
+        window.snoozeException = async () => {
+            const ref = doc(db, "groups", curGroupId, "sessions", curSessionId);
+            await updateDoc(ref, { [`exceptions.${curEditUid}.snoozed`]: true });
+            window.closeModals();
+        };
+
+        window.updateStatus = async (type) => {
+            const ref = doc(db, "groups", curGroupId, "sessions", curSessionId);
+            window.closeModals();
+            if(type === 'absent') await updateDoc(ref, { [`attendance.${curEditUid}`]: deleteField(), [`exceptions.${curEditUid}`]: deleteField() });
+            else await updateDoc(ref, { [`attendance.${curEditUid}`]: { status: type, timestamp: serverTimestamp() }, [`exceptions.${curEditUid}`]: deleteField() });
+        };
+
+        // לוגיקת תלמיד
+        function showStudent() {
+            document.getElementById('view-student').classList.remove('hidden');
+            window.loadStudentMain();
+        }
+
+        window.loadStudentMain = async () => {
+            const alertArea = document.getElementById('active-session-area');
+            const groupCont = document.getElementById('student-groups-container');
+            alertArea.innerHTML = ""; groupCont.innerHTML = "";
+            const snaps = await getDocs(query(collection(db, "groups"), where("members", "array-contains", auth.currentUser.uid)));
+            
+            for(const gd of snaps.docs) {
+                const sSnaps = await getDocs(query(collection(db, "groups", gd.id, "sessions"), where("status", "==", "open")));
+                sSnaps.forEach(sd => {
+                    if(!sd.data().attendance?.[auth.currentUser.uid]) {
+                        const div = document.createElement('div'); div.className = "card bg-blink-orange";
+                        div.innerHTML = `<strong>מפגש פתוח: ${gd.data().name}</strong><br>
+                        <button class="secondary mt-10" onclick="window.markAttend('${gd.id}', '${sd.id}', ${sd.data().instructorLocation.lat}, ${sd.data().instructorLocation.lng}, '${sd.data().expectedStartTime}', event)">דווח נוכחות 📍</button>`;
+                        alertArea.appendChild(div);
+                    }
+                });
+                groupCont.innerHTML += `<div class="card clickable" onclick="window.openHistory('${gd.id}', '${gd.data().name}')">
+                    <strong>${gd.data().name}</strong><br><small>היסטוריה ופרטים</small>
+                </div>`;
+            }
+        };
+
+        window.markAttend = async (gid, sid, iLat, iLng, start, e) => {
+            const btn = e.target; btn.disabled = true;
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const R = 6371e3; const dLat = (pos.coords.latitude - iLat) * Math.PI / 180;
+                const dLon = (pos.coords.longitude - iLng) * Math.PI / 180;
+                const a = Math.sin(dLat/2)**2 + Math.cos(iLat*Math.PI/180)*Math.cos(pos.coords.latitude*Math.PI/180)*Math.sin(dLon/2)**2;
+                const dist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+                
+                let stat = 'on_time';
+                if(start) {
+                    const [h, m] = start.split(':');
+                    const limit = new Date(); limit.setHours(h, Number(m)+15);
+                    if(new Date() > limit) stat = 'late';
+                }
+
+                const ref = doc(db, "groups", gid, "sessions", sid);
+                if(dist <= 100) await updateDoc(ref, { [`attendance.${auth.currentUser.uid}`]: { status: stat, timestamp: serverTimestamp() }, [`exceptions.${auth.currentUser.uid}`]: deleteField() });
+                else await updateDoc(ref, { [`exceptions.${auth.currentUser.uid}`]: { status: 'pending', distance: dist, timestamp: serverTimestamp() } });
+                
+                alert(dist <= 100 ? "נוכחות נקלטה!" : "חריג מיקום נשלח למדריך");
+                window.loadStudentMain();
+            }, () => { btn.disabled = false; alert("נא לאשר GPS"); }, {enableHighAccuracy: true});
+        };
+
+        window.backToStudentMain = () => { document.getElementById('student-history-view').classList.add('hidden'); document.getElementById('student-main-list').classList.remove('hidden'); };
+        window.backToInstructorMain = () => { if(liveUnsubscribe) liveUnsubscribe(); document.getElementById('instructor-group-details').classList.add('hidden'); document.getElementById('instructor-main').classList.remove('hidden'); };
+        window.backToGroupDetails = () => { if(liveUnsubscribe) liveUnsubscribe(); document.getElementById('session-report-view').classList.add('hidden'); document.getElementById('instructor-group-details').classList.remove('hidden'); };
         window.handleLogout = () => signOut(auth);
         
         document.getElementById('form-login').onsubmit = async (e) => {
             e.preventDefault();
             try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value); }
-            catch { alert("טעות באימייל או בסיסמה"); }
+            catch { alert("שגיאת התחברות"); }
         };
-
-        function showInstructor() {
-            document.getElementById('view-instructor').classList.remove('hidden');
-            document.getElementById('view-student').classList.add('hidden');
-        }
     </script>
 </body>
 </html>
