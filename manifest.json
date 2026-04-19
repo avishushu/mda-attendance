@@ -1,20 +1,21 @@
 {
-  "short_name": "MyApps",
-  "name": "My Web Application",
-  "start_url": "index.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "short_name": "נוכחות מד\"א",
+  "name": "מערכת ניהול נוכחות",
   "icons": [
     {
-      "src": "https://via.placeholder.com/192",
+      "src": "https://via.placeholder.com/192/d32f2f/ffffff?text=MDA",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "https://via.placeholder.com/512",
+      "src": "https://via.placeholder.com/512/d32f2f/ffffff?text=MDA",
       "type": "image/png",
       "sizes": "512x512"
     }
-  ]
+  ],
+  "start_url": "./index.html",
+  "display": "standalone",
+  "scope": "./",
+  "background_color": "#f8fafc",
+  "theme_color": "#d32f2f"
 }
