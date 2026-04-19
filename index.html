@@ -118,8 +118,8 @@
 <body>
 
     <div id="splash-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 99999; transition: opacity 0.5s;">
-        <h1 style="color: var(--primary-red); font-size: 2.5rem; margin-bottom: 10px;">;I'm here</h1>
-        <p style="color: var(--dark-blue); font-weight: 500;">מערכת ניהול נוכחות...</p>
+        <h1 style="color: var(--primary-red); font-size: 2.5rem; margin-bottom: 10px;">.I'm here</h1>
+        <p style="color: var(--dark-blue); font-weight: 500;">מערכת מתקדמת לניהול נוכחות...</p>
     </div>
 
     <button id="fab-install" class="hidden" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; background: var(--primary-red); color: white; border: none; padding: 12px 20px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;">
@@ -141,9 +141,9 @@
     <main>
         <section id="view-auth" class="card">
             <div id="login-section">
-                <h2 style="display: block; text-align: center;">התחברות</h2>
+                <h2 style="display: block; text-align: center;">התחברות מהירה</h2>
                 <form id="form-login">
-                    <input type="text" id="login-email" placeholder="תעודת זהות (או אימייל)" required>
+                    <input type="text" id="login-email" placeholder="תעודת זהות" required>
                     <input type="password" id="login-pass" placeholder="סיסמה" required>
                     <button type="submit" id="btn-login-submit">היכנס למערכת</button>
                     <button type="button" class="outline" style="margin-top: 15px;" onclick="window.toggleAuthMode(true)">משתמש חדש? לחץ להרשמה (תלמיד)</button>
@@ -175,7 +175,7 @@
                 
                 <h3 style="margin-top: 20px;">החלפת סיסמה</h3>
                 <input type="password" id="prof-new-pass" placeholder="סיסמה חדשה (מינימום 6 תווים)">
-                <button onclick="window.updateUserPassword()">עדכן סיסמה</button>
+                <button onclick="window.updateUserPassword()">שינוי סיסמה</button>
             </div>
         </section>
 
@@ -263,8 +263,8 @@
                     <p id="bypass-status-text" class="text-orange hidden" style="margin-bottom: 10px; font-weight: bold;"></p>
                     
                     <div class="action-row" style="margin-bottom: 15px;">
-                        <button class="outline action-btn-small" onclick="window.copySessionData()">📋 העתק סיכום נוכחות</button>
-                        <button class="outline action-btn-small" onclick="window.downloadSessionCSV()">📥 הורד דוח מפגש (CSV)</button>
+                        <button class="outline action-btn-small" onclick="window.copySessionData()">📋 העתק דו''ח נוכחות מהיר</button>
+                        <button class="outline action-btn-small" onclick="window.downloadSessionCSV()">📥 הורד דו''ח מפגש (CSV)</button>
                     </div>
 
                     <div id="report-container"></div>
@@ -289,7 +289,7 @@
                         <button class="outline action-btn-small" onclick="window.showStudentDashboard()">🏠 ראשי</button>
                     </div>
                     <h2 id="student-group-name-header">שם הקבוצה</h2>
-                    <h3 style="margin-top: 15px; margin-bottom: 10px;">מפגשי עבר</h3>
+                    <h3 style="margin-top: 15px; margin-bottom: 10px;">מפגשים קודמים</h3>
                     <div id="student-history-list"></div>
                 </div>
             </div>
@@ -307,7 +307,7 @@
 
     <div id="new-session-modal" class="modal-overlay hidden">
         <div class="card" style="width: 100%; max-width: 400px; margin: 0;">
-            <h3>פתיחת מפגש חדש</h3>
+            <h3>יצירת מפגש חדש</h3>
             <label style="font-weight: 500; font-size: 0.9rem; margin-bottom: 4px; display: block;">מספר מפגש:</label>
             <input type="number" id="ns-num">
             <label style="font-weight: 500; font-size: 0.9rem; margin-bottom: 4px; display: block;">שעת התחלה חובה:</label>
@@ -328,7 +328,7 @@
             <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
                 <button class="bg-green" onclick="window.updateStatus('on_time')">נוכח ✅</button>
                 <button class="bg-yellow" onclick="window.updateStatus('late')">איחור ⏰</button>
-                <button class="bg-blue" onclick="window.updateStatus('excused')">באישור 🟦</button>
+                <button class="bg-blue" onclick="window.updateStatus('excused')">חיסור באישור 🟦</button>
                 <button class="secondary" id="btn-snooze-action" onclick="window.snoozeException()">לטיפול בהמשך ⏳</button>
                 <button class="bg-red" onclick="window.updateStatus('absent')">חיסור ❌</button>
                 <button class="outline" onclick="window.closeModals()">סגור</button>
@@ -359,7 +359,7 @@
                 המערכת זיהתה שאתה רחוק מהמדריך או שלא אישרת מיקום.<br>
                 <b>מה לעשות?</b><br>
                 1. ודא שה-GPS שלך דולק.<br>
-                2. גש קרוב יותר למדריך.<br>
+                2. גש למיקום קרוב יותר למדריך.<br>
                 3. כבה מצב חיסכון בסוללה.
             </p>
             <button id="btn-retry-location" class="bg-yellow" style="color: white;">נסה שוב</button>
@@ -399,7 +399,7 @@
         <div id="ios-install-modal" class="modal-overlay hidden">
         <div class="card" style="width: 100%; max-width: 350px; text-align: center; margin: 0;">
             <h3>התקנת האפליקציה ב-iOS</h3>
-            <p style="margin: 15px 0;">כדי להתקין את המערכת על האייפון שלך:</p>
+            <p style="margin: 15px 0;">כדי להתקין את המערכת על האייפון שלך ולהנות מכל הפיצ'רים:</p>
             <ol style="text-align: right; margin-bottom: 20px; padding-right: 20px;">
                 <li>לחץ על כפתור השיתוף (Share) בתחתית המסך.</li>
                 <li>גלול למטה ולחץ על <strong>"הוסף למסך הבית" (Add to Home Screen)</strong>.</li>
