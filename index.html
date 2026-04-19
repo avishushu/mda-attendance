@@ -7,122 +7,165 @@
     <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-red: #d32f2f; --dark-blue: #1a237e; --light-gray: #f5f5f5;
-            --white: #ffffff; --success-green: #2e7d32; --warning-orange: #ed6c02;
-            --danger-red: #c62828; --late-yellow: #fbc02d; --muted-gray: #757575; --info-blue: #0288d1;
+            --primary-red: #d32f2f; --dark-blue: #1e293b; --light-bg: #f8fafc;
+            --white: #ffffff; --success-green: #15803d; --warning-orange: #ea580c;
+            --danger-red: #b91c1c; --late-yellow: #ca8a04; --muted-gray: #64748b; --info-blue: #0369a1;
+            --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            --border-color: #e2e8f0;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Heebo', sans-serif; }
-        body { background-color: var(--light-gray); color: #212121; display: flex; flex-direction: column; min-height: 100vh; padding-top: 70px; }
+        body { background-color: var(--light-bg); color: #0f172a; display: flex; flex-direction: column; min-height: 100vh; padding-top: 76px; }
 
         header { 
-            background-color: var(--dark-blue); color: var(--white); 
+            background-color: var(--white); color: var(--dark-blue); 
             padding: 0 20px; display: flex; justify-content: space-between; align-items: center; 
-            position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 10001; 
+            position: fixed; top: 0; left: 0; right: 0; height: 65px; z-index: 10001; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-bottom: 1px solid var(--border-color);
         }
 
         main { flex: 1; padding: 15px; max-width: 800px; margin: 0 auto; width: 100%; }
 
-        .card { background: var(--white); border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .clickable { cursor: pointer; transition: 0.2s; }
-        .clickable:hover { background-color: #f8f9ff; transform: translateY(-2px); }
+        /* Modern UI Elements */
+        .card { background: var(--white); border-radius: 16px; padding: 24px; box-shadow: var(--card-shadow); border: 1px solid var(--border-color); margin-bottom: 24px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .clickable { cursor: pointer; }
+        .clickable:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); border-color: #cbd5e1; }
 
-        h2 { color: var(--dark-blue); margin-bottom: 15px; border-bottom: 3px solid var(--primary-red); display: inline-block; padding-bottom: 5px; }
+        h2 { color: var(--dark-blue); margin-bottom: 20px; border-bottom: 3px solid var(--primary-red); display: inline-block; padding-bottom: 6px; font-weight: 700; }
+        h3 { color: var(--dark-blue); font-weight: 500; margin-bottom: 12px; }
         
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; margin-bottom: 10px; }
-        button { background-color: var(--primary-red); color: var(--white); border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; font-weight: bold; transition: 0.2s; }
-        button:disabled { background-color: #b0bec5 !important; cursor: not-allowed; }
+        input, select { width: 100%; padding: 14px; border: 1px solid var(--border-color); border-radius: 10px; background-color: #f8fafc; font-size: 1rem; margin-bottom: 12px; transition: 0.2s; }
+        input:focus { outline: none; border-color: var(--primary-red); background-color: var(--white); box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1); }
+        
+        button { background-color: var(--primary-red); color: var(--white); border: none; padding: 14px; border-radius: 10px; cursor: pointer; width: 100%; font-size: 1rem; font-weight: 600; transition: all 0.2s; letter-spacing: 0.3px; }
+        button:hover { background-color: #b71c1c; transform: translateY(-1px); }
+        button:disabled { background-color: #94a3b8 !important; cursor: not-allowed; transform: none; }
+        
         button.secondary { background-color: var(--dark-blue); }
-        button.outline { background: none; border: 1px solid var(--dark-blue); color: var(--dark-blue); }
-
-        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; border-radius: 8px; margin-bottom: 4px; }
-        .status-tag { padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; color: white; font-weight: bold; }
+        button.secondary:hover { background-color: #0f172a; }
         
-        .bg-green { background: var(--success-green); }
-        .bg-red { background: var(--danger-red); }
-        .bg-yellow { background: var(--late-yellow); color: black; }
-        .bg-blue { background: var(--info-blue); }
-        
-        .text-green { color: var(--success-green); }
-        .text-orange { color: var(--warning-orange); }
-        .text-red { color: var(--danger-red); }
+        button.outline { background: transparent; border: 1.5px solid var(--dark-blue); color: var(--dark-blue); }
+        button.outline:hover { background: #f1f5f9; }
 
-        @keyframes blinker { 50% { opacity: 0.4; } }
-        .bg-blink-warn { background-color: #fff3e0; border: 2px solid var(--warning-orange); animation: blinker 1.2s linear infinite; }
-        .bg-absent-static { background-color: #fdeaea; border-right: 4px solid var(--danger-red); }
+        .list-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border-color); border-radius: 10px; margin-bottom: 6px; background: var(--white); }
+        .list-item:last-child { border-bottom: none; }
+        .status-tag { padding: 4px 10px; border-radius: 20px; font-size: 0.85rem; color: white; font-weight: 600; letter-spacing: 0.5px; }
+        
+        .bg-green { background: var(--success-green); color: white !important;}
+        .bg-red { background: var(--danger-red); color: white !important;}
+        .bg-yellow { background: var(--late-yellow); color: white !important;}
+        .bg-blue { background: var(--info-blue); color: white !important;}
+        
+        .text-green { color: var(--success-green); font-weight: bold; }
+        .text-orange { color: var(--warning-orange); font-weight: bold; }
+        .text-red { color: var(--danger-red); font-weight: bold; }
+
+        @keyframes blinker { 50% { opacity: 0.5; } }
+        .bg-blink-warn { background-color: #fff7ed; border: 1.5px solid var(--warning-orange); animation: blinker 1.5s linear infinite; }
+        .bg-absent-static { background-color: #fef2f2; border-right: 4px solid var(--danger-red); }
 
         .hidden { display: none !important; }
-        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:20000; padding: 20px; }
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px); display:flex; align-items:center; justify-content:center; z-index:20000; padding: 20px; }
         
-        .tab-container { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #ddd; }
-        .tab { padding: 10px; cursor: pointer; border-bottom: 3px solid transparent; }
-        .tab.active { border-bottom-color: var(--primary-red); color: var(--primary-red); font-weight: bold; }
+        .tab-container { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); }
+        .tab { padding: 12px 16px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 500; color: var(--muted-gray); transition: 0.2s; }
+        .tab:hover { color: var(--dark-blue); }
+        .tab.active { border-bottom-color: var(--primary-red); color: var(--primary-red); font-weight: 700; }
 
-        .small-date { font-size: 0.75rem; color: var(--muted-gray); display: block; }
+        .small-date { font-size: 0.75rem; color: var(--muted-gray); display: block; margin-top: 4px; }
+        
+        .action-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .action-btn-small { width: auto; padding: 8px 12px; font-size: 0.9rem; }
+        .icon-btn { background: none; border: none; color: var(--danger-red); font-size: 1.2rem; cursor: pointer; padding: 5px; width: auto; }
+        .icon-btn:hover { background: #fee2e2; border-radius: 5px; transform: scale(1.1); }
 
-        .profile-area { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .dropdown-menu { position: absolute; top: 50px; left: 0; background: white; color: black; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 8px; display: none; width: 160px; z-index: 100; }
-        .dropdown-menu.show { display: block; }
-        .dropdown-item { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        /* Dropdown Fix - left: auto, right: 0 */
+        .profile-area { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 8px; border-radius: 8px; transition: 0.2s; }
+        .profile-area:hover { background: #f1f5f9; }
+        .dropdown-menu { position: absolute; top: 55px; right: 0; left: auto; background: white; color: black; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 12px; border: 1px solid var(--border-color); display: none; width: 160px; z-index: 100; overflow: hidden; }
+        .dropdown-menu.show { display: block; animation: dropIn 0.2s ease forwards; }
+        @keyframes dropIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .dropdown-item { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        .dropdown-item:hover { background: #f8fafc; padding-right: 20px; }
 
-        /* Toast Notifications */
-        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; }
-        .toast { padding: 15px 25px; border-radius: 8px; color: white; font-weight: bold; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); opacity: 0; transition: opacity 0.5s, transform 0.5s; transform: translateY(20px); }
-        .toast.show { opacity: 1; transform: translateY(0); }
+        #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 14px 24px; border-radius: 30px; color: white; font-weight: bold; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.2); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(30px) scale(0.9); }
+        .toast.show { opacity: 1; transform: translateY(0) scale(1); }
     </style>
 </head>
 <body>
 
     <header id="app-header" class="hidden">
         <div class="profile-area" onclick="window.toggleDropdown(event)">
-            <span id="user-display-name">טוען...</span>
+            <span>👤</span> <span id="user-display-name">טוען...</span>
             <div id="profile-dropdown" class="dropdown-menu">
-                <div class="dropdown-item" onclick="window.showProfileModal()">👤 פרופיל</div>
-                <div class="dropdown-item" style="color: var(--danger-red);" onclick="window.handleLogout()">🚪 יצא</div>
+                <div class="dropdown-item" onclick="window.showProfileModal()">הגדרות פרופיל</div>
+                <div class="dropdown-item" style="color: var(--danger-red);" onclick="window.handleLogout()">יציאה מהמערכת</div>
             </div>
         </div>
-        <div style="font-weight: bold;">מערכת נוכחות</div>
+        <div style="font-weight: 700; font-size: 1.1rem;">מערכת נוכחות</div>
     </header>
 
     <main>
         <section id="view-auth" class="card">
-            <h2 style="display: block; text-align: center;">כניסה</h2>
-            <form id="form-login">
-                <input type="email" id="login-email" placeholder="אימייל" required>
-                <input type="password" id="login-pass" placeholder="סיסמה" required>
-                <button type="submit" id="btn-login-submit">התחבר</button>
-            </form>
+            <div id="login-section">
+                <h2 style="display: block; text-align: center;">התחברות</h2>
+                <form id="form-login">
+                    <input type="text" id="login-email" placeholder="תעודת זהות (או אימייל)" required>
+                    <input type="password" id="login-pass" placeholder="סיסמה" required>
+                    <button type="submit" id="btn-login-submit">היכנס למערכת</button>
+                    <button type="button" class="outline" style="margin-top: 15px;" onclick="window.toggleAuthMode(true)">משתמש חדש? לחץ להרשמה (תלמיד)</button>
+                </form>
+            </div>
+            
+            <div id="register-section" class="hidden">
+                <h2 style="display: block; text-align: center;">הרשמת תלמיד חדש</h2>
+                <form id="form-register">
+                    <input type="text" id="reg-id" placeholder="תעודת זהות (9 ספרות)" required pattern="[0-9]{8,9}" title="נא להזין תעודת זהות תקינה">
+                    <input type="text" id="reg-name" placeholder="שם מלא" required>
+                    <input type="password" id="reg-pass" placeholder="בחר סיסמה (לפחות 6 תווים)" required minlength="6">
+                    <button type="submit" id="btn-reg-submit">צור משתמש</button>
+                    <button type="button" class="outline" style="margin-top: 15px;" onclick="window.toggleAuthMode(false)">חזור להתחברות</button>
+                </form>
+            </div>
         </section>
 
         <section id="view-instructor" class="hidden">
             <div id="instructor-main">
                 <div class="card">
                     <h2>הקבוצות שלי</h2>
-                    <button class="secondary" onclick="window.showCreateGroupModal()" style="margin-bottom: 15px;">➕ פתח קבוצה חדשה</button>
+                    <button class="secondary" onclick="window.showCreateGroupModal()" style="margin-bottom: 20px;">➕ פתח קבוצה חדשה</button>
                     <div id="instructor-groups-container"></div>
                 </div>
             </div>
 
             <div id="instructor-group-details" class="hidden">
                 <div class="card">
-                    <button class="outline" style="width: auto; margin-bottom: 10px;" onclick="window.showView('view-instructor')">🔙 חזור</button>
+                    <div class="action-row">
+                        <button class="outline action-btn-small" onclick="window.showView('view-instructor')">🔙 חזור</button>
+                        <button class="outline action-btn-small" onclick="window.showView('view-instructor')">🏠 ראשי</button>
+                    </div>
                     <h2 id="group-name-header">שם הקבוצה</h2>
                     
                     <div class="tab-container">
                         <div class="tab active" onclick="window.switchTab('sessions')">מפגשים</div>
-                        <div class="tab" onclick="window.switchTab('students')">תלמידים (דוחות)</div>
+                        <div class="tab" onclick="window.switchTab('students')">תלמידים (דוחות וניהול)</div>
                     </div>
 
                     <div id="tab-sessions">
-                        <div style="display:flex; gap: 10px; margin-bottom: 15px;">
-                            <button class="secondary" onclick="window.showNewSessionForm()">➕ פתח מפגש</button>
-                            <button class="outline" style="width: 50px;" onclick="window.toggleSort()">🔃</button>
+                        <div class="action-row">
+                            <button class="secondary action-btn-small" onclick="window.showNewSessionForm()">➕ פתח מפגש</button>
+                            <button class="outline action-btn-small" style="width: 50px;" onclick="window.toggleSort()">🔃</button>
                         </div>
                         <div id="instructor-sessions-list"></div>
                     </div>
 
                     <div id="tab-students" class="hidden">
-                        <button class="outline" onclick="window.exportReportCSV()" style="margin-bottom: 15px;">📥 הורד דוח נוכחות מלא (CSV)</button>
+                        <div class="action-row">
+                            <button class="outline action-btn-small" onclick="window.exportReportCSV()">📥 דוח נוכחות מלא (CSV)</button>
+                            <button class="secondary action-btn-small" onclick="window.addStudentById()">👤 הוסף חניך (לפי ת.ז)</button>
+                            <button class="secondary action-btn-small" onclick="window.addInstructorById()">👨‍🏫 הוסף מדריך נוסף</button>
+                        </div>
                         <div id="instructor-students-list"></div>
                     </div>
                 </div>
@@ -130,11 +173,20 @@
 
             <div id="session-report-view" class="hidden">
                 <div class="card">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <button class="outline" style="width: auto;" onclick="window.backToGroupDetails()">🔙 חזור</button>
-                        <button id="btn-lock-session" style="width: auto; background: black;" onclick="window.manualLock()">🔒 סגור רישום</button>
+                    <div class="action-row" style="justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 8px;">
+                            <button class="outline action-btn-small" onclick="window.backToGroupDetails()">🔙 חזור</button>
+                            <button class="outline action-btn-small" onclick="window.showView('view-instructor')">🏠 ראשי</button>
+                        </div>
+                        <button id="btn-lock-session" class="action-btn-small" style="background: #0f172a;" onclick="window.manualLock()">🔒 סגור רישום</button>
                     </div>
                     <h2 id="report-title">נוכחות חיה</h2>
+                    
+                    <div class="action-row" style="margin-bottom: 15px;">
+                        <button class="outline action-btn-small" onclick="window.copySessionData()">📋 העתק סיכום נוכחות</button>
+                        <button class="outline action-btn-small" onclick="window.downloadSessionCSV()">📥 הורד דוח מפגש (CSV)</button>
+                    </div>
+
                     <div id="report-container"></div>
                 </div>
             </div>
@@ -151,7 +203,10 @@
             
             <div id="student-group-details" class="hidden">
                 <div class="card">
-                    <button class="outline" style="width: auto; margin-bottom: 10px;" onclick="window.showStudentDashboard()">🔙 חזור</button>
+                    <div class="action-row">
+                        <button class="outline action-btn-small" onclick="window.showStudentDashboard()">🔙 חזור</button>
+                        <button class="outline action-btn-small" onclick="window.showStudentDashboard()">🏠 ראשי</button>
+                    </div>
                     <h2 id="student-group-name-header">שם הקבוצה</h2>
                     <h3 style="margin-top: 15px; margin-bottom: 10px;">מפגשי עבר</h3>
                     <div id="student-history-list"></div>
@@ -161,7 +216,7 @@
     </main>
 
     <div id="create-group-modal" class="modal-overlay hidden">
-        <div class="card" style="width: 100%; max-width: 400px;">
+        <div class="card" style="width: 100%; max-width: 400px; margin: 0;">
             <h3>פתיחת קבוצה חדשה</h3>
             <input type="text" id="cg-name" placeholder="שם הקבוצה">
             <button onclick="window.submitNewGroup()">שמור קבוצה</button>
@@ -170,20 +225,23 @@
     </div>
 
     <div id="new-session-modal" class="modal-overlay hidden">
-        <div class="card" style="width: 100%; max-width: 400px;">
+        <div class="card" style="width: 100%; max-width: 400px; margin: 0;">
             <h3>פתיחת מפגש חדש</h3>
-            <label>מספר מפגש:</label><input type="number" id="ns-num">
-            <label>שעת התחלה:</label><input type="time" id="ns-start">
-            <label>שעת סיום אופציונלית (אוטומציה עתידית):</label><input type="time" id="ns-end">
+            <label style="font-weight: 500; font-size: 0.9rem; margin-bottom: 4px; display: block;">מספר מפגש:</label>
+            <input type="number" id="ns-num">
+            <label style="font-weight: 500; font-size: 0.9rem; margin-bottom: 4px; display: block;">שעת התחלה חובה:</label>
+            <input type="time" id="ns-start">
+            <label style="font-weight: 500; font-size: 0.9rem; margin-bottom: 4px; display: block;">שעת סיום אופציונלית:</label>
+            <input type="time" id="ns-end">
             <button id="btn-create-session" onclick="window.submitNewSession(event)">הפעל ודגום מיקום 📍</button>
             <button class="outline" style="margin-top:10px" onclick="window.closeModals()">ביטול</button>
         </div>
     </div>
 
     <div id="edit-student-modal" class="modal-overlay hidden">
-        <div class="card" style="width: 100%; max-width: 350px;">
+        <div class="card" style="width: 100%; max-width: 350px; margin: 0;">
             <h3 id="es-name">עדכון חניך</h3>
-            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
                 <button class="bg-green" onclick="window.updateStatus('on_time')">נוכח ✅</button>
                 <button class="bg-yellow" onclick="window.updateStatus('late')">איחור ⏰</button>
                 <button class="bg-blue" onclick="window.updateStatus('excused')">באישור 🟦</button>
@@ -195,24 +253,24 @@
     </div>
 
     <div id="student-history-modal" class="modal-overlay hidden">
-        <div class="card" style="width: 100%; max-width: 400px; max-height: 80vh; overflow-y: auto;">
+        <div class="card" style="width: 100%; max-width: 400px; max-height: 80vh; overflow-y: auto; margin: 0;">
             <h3 id="sh-name">היסטוריה</h3>
             <div id="sh-list"></div>
-            <button onclick="window.closeModals()" style="margin-top: 15px;">סגור</button>
+            <button class="outline" onclick="window.closeModals()" style="margin-top: 15px;">סגור</button>
         </div>
     </div>
 
     <div id="location-retry-modal" class="modal-overlay hidden">
-        <div class="card" style="width: 100%; max-width: 400px; text-align: center;">
+        <div class="card" style="width: 100%; max-width: 400px; text-align: center; margin: 0;">
             <h3 style="color: var(--danger-red);">שגיאת מיקום 📍</h3>
-            <p style="margin-bottom: 15px; font-size: 0.95rem;">
+            <p style="margin-bottom: 15px; font-size: 0.95rem; line-height: 1.5;">
                 המערכת זיהתה שאתה רחוק מהמדריך או שלא אישרת מיקום.<br>
                 <b>מה לעשות?</b><br>
                 1. ודא שה-GPS שלך דולק.<br>
                 2. גש קרוב יותר למדריך.<br>
                 3. כבה מצב חיסכון בסוללה.
             </p>
-            <button id="btn-retry-location" class="bg-yellow">נסה שוב</button>
+            <button id="btn-retry-location" class="bg-yellow" style="color: white;">נסה שוב</button>
             <button id="btn-send-exception" class="secondary hidden" style="margin-top: 10px;">שלח בקשה חריגה למדריך ✋</button>
             <button class="outline" style="margin-top:10px" onclick="window.closeModals()">ביטול</button>
         </div>
@@ -222,8 +280,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, collection, addDoc, query, where, getDocs, updateDoc, deleteField, orderBy, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, updateDoc, deleteField, orderBy, serverTimestamp, onSnapshot, arrayUnion, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE", authDomain: "attendancemda.firebaseapp.com",
@@ -237,10 +295,11 @@
 
         let userData = null, curGroupId = null, curSessionId = null, curEditUid = null;
         let liveUnsubscribe = null, membersCache = [], sessionSort = 'desc', allSessionsCache = [];
+        let liveSessionData = null, liveSessionNumber = null;
 
         window.toggleDropdown = (e) => { e.stopPropagation(); document.getElementById('profile-dropdown').classList.toggle('show'); };
         window.closeModals = () => document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
-        window.onclick = () => document.getElementById('profile-dropdown').classList.remove('show');
+        window.onclick = () => { const dd = document.getElementById('profile-dropdown'); if(dd) dd.classList.remove('show'); };
 
         window.showToast = (message, type = 'success') => {
             const container = document.getElementById('toast-container');
@@ -249,10 +308,12 @@
             toast.innerText = message;
             container.appendChild(toast);
             setTimeout(() => toast.classList.add('show'), 10);
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 500);
-            }, 4000);
+            setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 500); }, 4000);
+        };
+
+        window.toggleAuthMode = (isRegister) => {
+            document.getElementById('login-section').classList.toggle('hidden', isRegister);
+            document.getElementById('register-section').classList.toggle('hidden', !isRegister);
         };
 
         onAuthStateChanged(auth, async (user) => {
@@ -264,7 +325,7 @@
                     document.getElementById('app-header').classList.remove('hidden');
                     
                     if (userData.role === 'admin') {
-                        // Admin view stub - logic not requested to be changed
+                        // Admin view stub
                     } else if (userData.role === 'instructor') {
                         window.showView('view-instructor'); window.loadInstructorMain();
                     } else {
@@ -277,17 +338,78 @@
             }
         });
 
+        // --- Auth Logic ---
+        document.getElementById('form-login').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-login-submit'); btn.disabled = true; btn.innerText = "מתחבר...";
+            let loginInput = document.getElementById('login-email').value.trim();
+            // אם המשתמש הזין רק ת.ז (מספרים ללא @), נשלים עבורו לכתובת המערכת
+            if(!loginInput.includes('@')) {
+                loginInput = loginInput + '@mada.system.local';
+            }
+            try { 
+                await signInWithEmailAndPassword(auth, loginInput, document.getElementById('login-pass').value); 
+            } catch { 
+                alert("פרטים שגויים. נסה שוב."); btn.disabled = false; btn.innerText = "היכנס למערכת"; 
+            }
+        };
+
+        document.getElementById('form-register').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-reg-submit'); btn.disabled = true; btn.innerText = "יוצר משתמש...";
+            const id = document.getElementById('reg-id').value.trim();
+            const name = document.getElementById('reg-name').value.trim();
+            const pass = document.getElementById('reg-pass').value;
+            const email = id + '@mada.system.local'; // יצירת אימייל וירטואלי מבוסס ת.ז
+
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, email, pass);
+                await setDoc(doc(db, "users", cred.user.uid), {
+                    idNumber: id, fullName: name, role: 'student', createdAt: serverTimestamp()
+                });
+                window.showToast("משתמש נוצר בהצלחה! מתחבר...");
+            } catch (err) {
+                alert("שגיאה ביצירת משתמש: ייתכן שהתעודת זהות כבר קיימת במערכת.");
+                btn.disabled = false; btn.innerText = "צור משתמש";
+            }
+        };
+
         // --- Instructor Logic ---
         window.loadInstructorMain = async () => {
             const cont = document.getElementById('instructor-groups-container');
-            const snaps = await getDocs(query(collection(db, "groups"), where("instructorId", "==", auth.currentUser.uid)));
-            cont.innerHTML = snaps.empty ? "אין קבוצות בניהולך" : "";
-            snaps.forEach(d => {
-                const div = document.createElement('div'); div.className = "card clickable";
-                div.innerHTML = `<strong>${d.data().name}</strong>`;
-                div.onclick = () => window.openGroup(d.id, d.data().name);
+            cont.innerHTML = "טוען...";
+            
+            // שליפת קבוצות - מנהל ראשי או מדריך שותף
+            const q1 = await getDocs(query(collection(db, "groups"), where("instructorId", "==", auth.currentUser.uid)));
+            const q2 = await getDocs(query(collection(db, "groups"), where("coInstructors", "array-contains", auth.currentUser.uid)));
+            
+            const groupsMap = new Map();
+            q1.forEach(d => groupsMap.set(d.id, d));
+            q2.forEach(d => groupsMap.set(d.id, d));
+
+            cont.innerHTML = groupsMap.size === 0 ? "אין קבוצות בניהולך" : "";
+            
+            groupsMap.forEach(d => {
+                const div = document.createElement('div'); div.className = "card clickable list-item";
+                div.style.marginBottom = "15px"; div.style.padding = "20px";
+                div.innerHTML = `
+                    <div style="flex:1;">
+                        <h3 style="margin:0; font-size:1.2rem;">${d.data().name}</h3>
+                    </div>
+                    <button class="icon-btn" title="מחק קבוצה" onclick="window.deleteGroup('${d.id}', event)">🗑️</button>
+                `;
+                div.onclick = (e) => { if(!e.target.closest('.icon-btn')) window.openGroup(d.id, d.data().name); };
                 cont.appendChild(div);
             });
+        };
+
+        window.deleteGroup = async (gid, e) => {
+            e.stopPropagation();
+            if(confirm("אזהרה: מחיקת קבוצה תמחק את כולה ללא אפשרות שחזור. האם אתה בטוח?")) {
+                await deleteDoc(doc(db, "groups", gid));
+                window.showToast("הקבוצה נמחקה.");
+                window.loadInstructorMain();
+            }
         };
 
         window.showCreateGroupModal = () => {
@@ -298,7 +420,9 @@
         window.submitNewGroup = async () => {
             const name = document.getElementById('cg-name').value;
             if(!name) return alert('הכנס שם קבוצה');
-            await addDoc(collection(db, "groups"), { name, instructorId: auth.currentUser.uid, members: [], createdAt: serverTimestamp() });
+            await addDoc(collection(db, "groups"), { 
+                name, instructorId: auth.currentUser.uid, coInstructors: [], members: [], createdAt: serverTimestamp() 
+            });
             window.closeModals(); window.loadInstructorMain(); window.showToast('הקבוצה נוצרה בהצלחה!');
         };
 
@@ -321,20 +445,58 @@
                 let reopenBtn = "";
                 if (s.status === 'closed' && s.createdAt) {
                     const diff = (new Date().getTime() - s.createdAt.toDate().getTime()) / (1000 * 60 * 60);
-                    if (diff < 48) reopenBtn = `<button class="outline" style="width:auto; padding:2px 5px; font-size:0.7rem; margin-right:5px;" onclick="event.stopPropagation(); window.reopenSession('${s.id}')">🔄 פתח מחדש</button>`;
+                    if (diff < 48) reopenBtn = `<button class="outline" style="width:auto; padding:4px 8px; font-size:0.8rem; margin-right:8px;" onclick="event.stopPropagation(); window.reopenSession('${s.id}')">🔄 פתח מחדש</button>`;
                 }
                 const dateStr = s.createdAt ? s.createdAt.toDate().toLocaleDateString('he-IL') : '';
                 const div = document.createElement('div'); div.className = "list-item clickable";
-                div.innerHTML = `<div><span>מפגש ${s.sessionNumber}</span><span class="small-date">${dateStr}</span></div> <div>${reopenBtn} <span class="status-tag ${s.status==='open'?'bg-green':'bg-red'}">${s.status==='open'?'פתוח':'סגור'}</span></div>`;
-                div.onclick = () => window.openReportLive(s.id, s.sessionNumber, s.status);
+                div.innerHTML = `
+                    <div><span style="font-weight:600; font-size:1.05rem;">מפגש ${s.sessionNumber}</span><span class="small-date">${dateStr}</span></div> 
+                    <div style="display:flex; align-items:center;">
+                        ${reopenBtn} 
+                        <span class="status-tag ${s.status==='open'?'bg-green':'bg-red'}">${s.status==='open'?'פתוח':'סגור'}</span>
+                        <button class="icon-btn" style="margin-right:10px;" title="מחק מפגש" onclick="window.deleteSession('${s.id}', event)">🗑️</button>
+                    </div>`;
+                div.onclick = (e) => { if(!e.target.closest('button')) window.openReportLive(s.id, s.sessionNumber, s.status); };
                 list.appendChild(div);
             });
             window.loadStudentsWithStats();
         };
 
+        window.deleteSession = async (sid, e) => {
+            e.stopPropagation();
+            if(confirm("האם למחוק מפגש זה?")) {
+                await deleteDoc(doc(db, "groups", curGroupId, "sessions", sid));
+                window.showToast("המפגש נמחק.");
+                window.loadSessions();
+            }
+        };
+
         window.reopenSession = async (sid) => {
             await updateDoc(doc(db, "groups", curGroupId, "sessions", sid), { status: 'open' });
             window.loadSessions();
+        };
+
+        window.addStudentById = async () => {
+            const idNumber = prompt("הכנס תעודת זהות של החניך (9 ספרות):");
+            if(!idNumber) return;
+            const q = query(collection(db, "users"), where("idNumber", "==", idNumber), where("role", "==", "student"));
+            const snaps = await getDocs(q);
+            if(snaps.empty) return alert("לא נמצא תלמיד עם תעודת זהות זו. ודא שהוא נרשם למערכת.");
+            const studentUid = snaps.docs[0].id;
+            await updateDoc(doc(db, "groups", curGroupId), { members: arrayUnion(studentUid) });
+            window.showToast("חניך צורף בהצלחה לקבוצה!");
+            window.loadStudentsWithStats();
+        };
+
+        window.addInstructorById = async () => {
+            const idNumber = prompt("הכנס תעודת זהות של המדריך הנוסף:");
+            if(!idNumber) return;
+            const q = query(collection(db, "users"), where("idNumber", "==", idNumber), where("role", "==", "instructor"));
+            const snaps = await getDocs(q);
+            if(snaps.empty) return alert("לא נמצא מדריך עם תעודת זהות זו.");
+            const instUid = snaps.docs[0].id;
+            await updateDoc(doc(db, "groups", curGroupId), { coInstructors: arrayUnion(instUid) });
+            window.showToast("מדריך נוסף צורף בהצלחה!");
         };
 
         window.loadStudentsWithStats = async () => {
@@ -350,7 +512,6 @@
                     allSessionsCache.forEach(s => { if(s.attendance?.[uid]) present++; });
                     const pct = allSessionsCache.length ? Math.round((present/allSessionsCache.length)*100) : 0;
                     
-                    // צבע לפי אחוזים
                     let colorClass = 'text-green';
                     if(pct < 50) colorClass = 'text-red';
                     else if(pct < 80) colorClass = 'text-orange';
@@ -366,14 +527,12 @@
 
         window.exportReportCSV = () => {
             if(membersCache.length === 0 || allSessionsCache.length === 0) return alert('אין מספיק נתונים לדוח');
-            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM for Hebrew
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
             
-            // Header
             let header = ["שם תלמיד", "אחוז נוכחות כולל"];
             allSessionsCache.forEach(s => header.push(`מפגש ${s.sessionNumber}`));
             csvContent += header.join(",") + "\r\n";
 
-            // Data
             membersCache.forEach(m => {
                 let row = [m.name, `${m.pct}%`];
                 allSessionsCache.forEach(s => {
@@ -392,7 +551,7 @@
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "דוח_נוכחות.csv");
+            link.setAttribute("download", "דוח_נוכחות_מלא.csv");
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -414,20 +573,85 @@
             document.getElementById('student-history-modal').classList.remove('hidden');
         };
 
+        window.showNewSessionForm = () => {
+            let nextNum = 1;
+            if(allSessionsCache && allSessionsCache.length > 0) {
+                const max = Math.max(...allSessionsCache.map(s => s.sessionNumber));
+                nextNum = max + 1;
+            }
+            document.getElementById('ns-num').value = nextNum;
+            document.getElementById('ns-start').value = "";
+            document.getElementById('ns-end').value = "";
+            document.getElementById('new-session-modal').classList.remove('hidden');
+        };
+
         window.openReportLive = (sid, snum, status) => {
             curSessionId = sid;
+            liveSessionNumber = snum;
             document.getElementById('instructor-group-details').classList.add('hidden');
             document.getElementById('session-report-view').classList.remove('hidden');
             document.getElementById('report-title').innerText = `מפגש ${snum}`;
             document.getElementById('btn-lock-session').classList.toggle('hidden', status !== 'open');
             if(liveUnsubscribe) liveUnsubscribe();
-            liveUnsubscribe = onSnapshot(doc(db, "groups", curGroupId, "sessions", sid), (snap) => renderReport(snap.data()));
+            liveUnsubscribe = onSnapshot(doc(db, "groups", curGroupId, "sessions", sid), (snap) => {
+                liveSessionData = snap.data();
+                renderReport(liveSessionData);
+            });
+        };
+
+        // העתקה מהירה מתוך מפגש
+        window.copySessionData = () => {
+            if(!liveSessionData) return;
+            let present=[], late=[], excused=[], absent=[];
+            
+            membersCache.forEach(student => {
+                const att = liveSessionData.attendance?.[student.uid];
+                if(att) {
+                    if(att.status === 'on_time') present.push(student.name);
+                    else if(att.status === 'late') late.push(student.name);
+                    else if(att.status === 'excused') excused.push(student.name);
+                } else {
+                    absent.push(student.name);
+                }
+            });
+
+            let txt = `דוח נוכחות - מפגש ${liveSessionNumber}\n`;
+            txt += `✅ נוכחים: ${present.join(', ') || 'אין'}\n`;
+            txt += `⏰ מאחרים: ${late.join(', ') || 'אין'}\n`;
+            txt += `🟦 באישור: ${excused.join(', ') || 'אין'}\n`;
+            txt += `❌ חיסור: ${absent.join(', ') || 'אין'}`;
+            
+            navigator.clipboard.writeText(txt).then(() => window.showToast("הנתונים הועתקו ללוח!"));
+        };
+
+        // הורדת CSV של מפגש ספציפי
+        window.downloadSessionCSV = () => {
+            if(!liveSessionData) return;
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
+            csvContent += `שם תלמיד,סטטוס\r\n`;
+
+            membersCache.forEach(student => {
+                const att = liveSessionData.attendance?.[student.uid];
+                let stat = "חיסור";
+                if(att) {
+                    if(att.status === 'on_time') stat = "נוכח";
+                    else if(att.status === 'late') stat = "איחור";
+                    else if(att.status === 'excused') stat = "באישור";
+                }
+                csvContent += `${student.name},${stat}\r\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `מפגש_${liveSessionNumber}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         };
 
         function renderReport(sdata) {
             const container = document.getElementById('report-container'); container.innerHTML = "";
-            
-            // המיון החכם - חריגים וחסרים בראש
             const sorted = [...membersCache].sort((a,b) => getRank(a.uid, sdata) - getRank(b.uid, sdata));
             
             sorted.forEach(student => {
@@ -447,7 +671,7 @@
                 } else if(sdata.status === 'closed') { txt = "חיסור"; cls = "bg-absent-static"; }
 
                 const div = document.createElement('div'); div.className = `list-item clickable ${cls}`;
-                div.innerHTML = `<span>${student.name}</span><strong>${txt}</strong>`;
+                div.innerHTML = `<span style="font-weight:500;">${student.name}</span><strong>${txt}</strong>`;
                 div.onclick = () => {
                     curEditUid = student.uid;
                     document.getElementById('es-name').innerText = student.name;
@@ -460,10 +684,10 @@
 
         function getRank(uid, sdata) {
             const att = sdata.attendance?.[uid]; const exc = sdata.exceptions?.[uid];
-            if(exc && !exc.snoozed) return 0; // בקשות חריגות ושגיאות למעלה
-            if(!att && !exc) return 1; // טרם נרשמו למעלה
-            if(exc?.snoozed) return 2; // מושהים
-            return 3; // נרשמו יורדים למטה
+            if(exc && !exc.snoozed) return 0;
+            if(!att && !exc) return 1;
+            if(exc?.snoozed) return 2;
+            return 3;
         }
 
         window.updateStatus = async (type) => {
@@ -495,7 +719,7 @@
                     instructorLocation: { lat: pos.coords.latitude, lng: pos.coords.longitude }
                 });
                 window.closeModals(); window.loadSessions();
-            }, () => { btn.disabled = false; btn.innerText = "הפעל ודגום מיקום 📍"; alert("GPS חובה לפתיחת מפגש"); }, {enableHighAccuracy: true});
+            }, () => { btn.disabled = false; btn.innerText = "הפעל ודגום מיקום 📍"; alert("GPS חובה לפתיחת מפגש. ודא שהמיקום דלוק בדפדפן."); }, {enableHighAccuracy: true});
         };
 
         // --- Student Logic ---
@@ -508,13 +732,15 @@
                 const sSnaps = await getDocs(query(collection(db, "groups", gd.id, "sessions"), where("status", "==", "open")));
                 sSnaps.forEach(sd => {
                     if(!sd.data().attendance?.[auth.currentUser.uid]) {
-                        alerts.innerHTML += `<div class="card bg-blink-warn"><strong>מפגש פתוח: ${gd.data().name}</strong><button onclick="window.startAttendProcess('${gd.id}','${sd.id}',${sd.data().instructorLocation.lat},${sd.data().instructorLocation.lng},'${sd.data().expectedStartTime}',0, event)" style="margin-top:10px">דווח נוכחות 📍</button></div>`;
+                        alerts.innerHTML += `<div class="card bg-blink-warn" style="margin-bottom:15px; padding:20px;">
+                            <strong style="display:block; margin-bottom:10px; font-size:1.1rem;">מפגש פתוח: ${gd.data().name}</strong>
+                            <button onclick="window.startAttendProcess('${gd.id}','${sd.id}',${sd.data().instructorLocation.lat},${sd.data().instructorLocation.lng},'${sd.data().expectedStartTime}',0, event)">דווח נוכחות 📍</button>
+                        </div>`;
                     }
                 });
                 
-                // כניסה לפירוט קורס תלמיד
-                const div = document.createElement('div'); div.className = "card clickable";
-                div.innerHTML = `<strong>${gd.data().name}</strong>`;
+                const div = document.createElement('div'); div.className = "card clickable list-item";
+                div.innerHTML = `<h3 style="margin:0; font-size:1.1rem;">${gd.data().name}</h3>`;
                 div.onclick = () => window.openStudentGroup(gd.id, gd.data().name);
                 cont.appendChild(div);
             }
@@ -548,7 +774,6 @@
             document.getElementById('student-main-dashboard').classList.remove('hidden');
         };
 
-        // מנגנון ניסיון שני וחריגים
         window.startAttendProcess = (gid, sid, iLat, iLng, start, retryCount, event) => {
             const btn = event.target; btn.disabled = true; btn.innerText = "מעבד...";
             
@@ -598,7 +823,7 @@
             window.loadStudentMain();
         };
 
-        // --- Helpers ---
+        // --- View Helpers ---
         window.showView = (id) => { 
             document.querySelectorAll('section, #instructor-main, #instructor-group-details, #session-report-view, #student-main-dashboard, #student-group-details').forEach(e => e.classList.add('hidden')); 
             document.getElementById(id).classList.remove('hidden'); 
@@ -615,12 +840,6 @@
         window.backToGroupDetails = () => { document.getElementById('session-report-view').classList.add('hidden'); document.getElementById('instructor-group-details').classList.remove('hidden'); };
         window.handleLogout = () => signOut(auth);
 
-        document.getElementById('form-login').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-login-submit'); btn.disabled = true; btn.innerText = "מתחבר...";
-            try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value); }
-            catch { alert("פרטים שגויים"); btn.disabled = false; btn.innerText = "התחבר"; }
-        };
     </script>
 </body>
 </html>
