@@ -182,9 +182,9 @@
         <section id="view-admin" class="card hidden">
             <h2>מערכת ניהול</h2>
             <div class="tab-container">
-                <div class="tab active" onclick="window.switchAdminTab('users')">ניהול משתמשים</div>
-                <div class="tab" onclick="window.switchAdminTab('groups')">ניהול קבוצות</div>
-                <div class="tab" onclick="window.switchAdminTab('dashboard')">סקירה מערכתית</div>
+                <div class="tab active" onclick="window.switchAdminTab('users', event)">ניהול משתמשים</div>
+                <div class="tab" onclick="window.switchAdminTab('groups', event)">ניהול קבוצות</div>
+                <div class="tab" onclick="window.switchAdminTab('dashboard', event)">סקירה מערכתית</div>
             </div>
 
             <div id="admin-tab-users">
@@ -220,9 +220,9 @@
                     <h2 id="group-name-header">שם הקבוצה</h2>
                     
                     <div class="tab-container">
-                        <div class="tab active" onclick="window.switchTab('sessions')">מפגשים</div>
-                        <div class="tab" onclick="window.switchTab('students')">תלמידים (דוחות וניהול)</div>
-                        <div class="tab" onclick="window.switchTab('notices')">לוח מודעות</div>
+                        <div class="tab active" onclick="window.switchTab('sessions', event)">מפגשים</div>
+                        <div class="tab" onclick="window.switchTab('students', event)">תלמידים (דוחות וניהול)</div>
+                        <div class="tab" onclick="window.switchTab('notices', event)">לוח מודעות</div>
                     </div>
 
                     <div id="tab-sessions">
@@ -530,9 +530,9 @@ onAuthStateChanged(auth, async (user) => {
 
         // --- Admin Logic ---
         window.showAdminView = () => { window.showView('view-admin'); window.loadAdminMain(); };
-        window.switchAdminTab = (t) => {
+        window.switchAdminTab = (t, e) => {
             document.querySelectorAll('#view-admin .tab').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
+            if (e && e.target) e.target.classList.add('active');
             document.getElementById('admin-tab-users').classList.toggle('hidden', t !== 'users');
             document.getElementById('admin-tab-groups').classList.toggle('hidden', t !== 'groups');
             document.getElementById('admin-tab-dashboard').classList.toggle('hidden', t !== 'dashboard');
@@ -542,7 +542,7 @@ onAuthStateChanged(auth, async (user) => {
             if(t === 'dashboard') window.loadAdminDashboard();
         };
 
-        window.loadAdminMain = () => { window.switchAdminTab('users'); };
+        window.loadAdminMain = () => { window.switchAdminTab('users', null); };
 
         window.loadAdminUsers = async () => {
             const list = document.getElementById('admin-users-list'); list.innerHTML = "טוען משתמשים...";
@@ -1339,9 +1339,9 @@ onAuthStateChanged(auth, async (user) => {
             if(id === 'view-instructor') document.getElementById('instructor-main').classList.remove('hidden');
             if(id === 'view-student') document.getElementById('student-main-dashboard').classList.remove('hidden');
         };
-        window.switchTab = (t) => {
+        window.switchTab = (t, e) => {
             document.querySelectorAll('#instructor-group-details .tab').forEach(el => el.classList.remove('active'));
-            event.target.classList.add('active');
+            if (e && e.target) e.target.classList.add('active');
             document.getElementById('tab-sessions').classList.toggle('hidden', t !== 'sessions');
             document.getElementById('tab-students').classList.toggle('hidden', t !== 'students');
             document.getElementById('tab-notices').classList.toggle('hidden', t !== 'notices');
