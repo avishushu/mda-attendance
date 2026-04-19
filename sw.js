@@ -1,2 +1,3 @@
-// Service worker file
-self.addEventListener('fetch', (event) => {});
+self.addEventListener('fetch', (event) => {
+    // קובץ שירות בסיסי להפעלת PWA
+});
