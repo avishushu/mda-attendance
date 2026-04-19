@@ -12,7 +12,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js');
+                navigator.serviceWorker.register('sw.js').catch(()=>{});
             });
         }
     </script>
@@ -68,20 +68,24 @@
         .bg-red { background: var(--danger-red); color: white !important;}
         .bg-yellow { background: var(--late-yellow); color: white !important;}
         .bg-blue { background: var(--info-blue); color: white !important;}
+        .bg-purple { background: #7e22ce; color: white !important;}
         
         .text-green { color: var(--success-green); font-weight: bold; }
         .text-orange { color: var(--warning-orange); font-weight: bold; }
         .text-red { color: var(--danger-red); font-weight: bold; }
 
         @keyframes blinker { 50% { opacity: 0.5; } }
+        @keyframes intenseBlinker { 0% { background-color: #fecdd3; transform: scale(1); } 50% { background-color: #f43f5e; color: white; transform: scale(1.02); } 100% { background-color: #fecdd3; transform: scale(1); } }
+        
         .bg-blink-warn { background-color: #fff7ed; border: 1.5px solid var(--warning-orange); animation: blinker 1.5s linear infinite; }
+        .bg-blink-intense { border: 2px solid var(--danger-red); animation: intenseBlinker 1s infinite; cursor: pointer;}
         .bg-absent-static { background-color: #fef2f2; border-right: 4px solid var(--danger-red); }
 
         .hidden { display: none !important; }
         .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(15, 23, 42, 0.6); backdrop-filter: blur(3px); display:flex; align-items:center; justify-content:center; z-index:20000; padding: 20px; }
         
-        .tab-container { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); }
-        .tab { padding: 12px 16px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 500; color: var(--muted-gray); transition: 0.2s; }
+        .tab-container { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); overflow-x: auto;}
+        .tab { padding: 12px 16px; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 500; color: var(--muted-gray); transition: 0.2s; white-space: nowrap;}
         .tab:hover { color: var(--dark-blue); }
         .tab.active { border-bottom-color: var(--primary-red); color: var(--primary-red); font-weight: 700; }
 
@@ -89,10 +93,11 @@
         
         .action-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
         .action-btn-small { width: auto; padding: 8px 12px; font-size: 0.9rem; }
-        .icon-btn { background: none; border: none; color: var(--danger-red); font-size: 1.2rem; cursor: pointer; padding: 5px; width: auto; }
-        .icon-btn:hover { background: #fee2e2; border-radius: 5px; transform: scale(1.1); }
+        
+        /* Updated Delete Button styling */
+        .icon-btn { background: #fee2e2; border: 1px solid var(--danger-red); border-radius: 6px; color: var(--danger-red); font-size: 1.2rem; cursor: pointer; padding: 6px 10px; width: auto; transition: 0.2s;}
+        .icon-btn:hover { background: var(--danger-red); color: white; transform: scale(1.05); }
 
-        /* Dropdown Fix - left: auto, right: 0 */
         .profile-area { position: relative; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 8px; border-radius: 8px; transition: 0.2s; }
         .profile-area:hover { background: #f1f5f9; }
         .dropdown-menu { position: absolute; top: 55px; right: 0; left: auto; background: white; color: black; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 12px; border: 1px solid var(--border-color); display: none; width: 160px; z-index: 100; overflow: hidden; }
@@ -101,9 +106,13 @@
         .dropdown-item { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: 0.2s; }
         .dropdown-item:hover { background: #f8fafc; padding-right: 20px; }
 
-        #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; }
+        #toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 99999; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 400px;}
         .toast { padding: 14px 24px; border-radius: 30px; color: white; font-weight: bold; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.2); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform: translateY(30px) scale(0.9); }
         .toast.show { opacity: 1; transform: translateY(0) scale(1); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid var(--border-color); padding: 10px; text-align: right; }
+        th { background-color: #f1f5f9; }
     </style>
 </head>
 <body>
@@ -112,7 +121,8 @@
         <div class="profile-area" onclick="window.toggleDropdown(event)">
             <span>👤</span> <span id="user-display-name">טוען...</span>
             <div id="profile-dropdown" class="dropdown-menu">
-                <div class="dropdown-item" onclick="window.showProfileModal()">הגדרות פרופיל</div>
+                <div class="dropdown-item" onclick="window.showProfileView()">פרטים אישיים</div>
+                <div id="nav-admin-btn" class="dropdown-item hidden" onclick="window.showAdminView()">פאנל ניהול</div>
                 <div class="dropdown-item" style="color: var(--danger-red);" onclick="window.handleLogout()">יציאה מהמערכת</div>
             </div>
         </div>
@@ -143,6 +153,41 @@
             </div>
         </section>
 
+        <section id="view-profile" class="card hidden">
+            <div class="action-row">
+                <button class="outline action-btn-small" onclick="window.goBackToMain()">🔙 חזור למסך הראשי</button>
+            </div>
+            <h2>פרטים אישיים</h2>
+            <div>
+                <label>שם מלא:</label>
+                <input type="text" id="prof-name" disabled>
+                <label>תעודת זהות (אימייל מערכת):</label>
+                <input type="text" id="prof-email" disabled>
+                
+                <h3 style="margin-top: 20px;">החלפת סיסמה</h3>
+                <input type="password" id="prof-new-pass" placeholder="סיסמה חדשה (מינימום 6 תווים)">
+                <button onclick="window.updateUserPassword()">עדכן סיסמה</button>
+            </div>
+        </section>
+
+        <section id="view-admin" class="card hidden">
+            <h2>מערכת ניהול</h2>
+            <div class="tab-container">
+                <div class="tab active" onclick="window.switchAdminTab('users')">ניהול משתמשים</div>
+                <div class="tab" onclick="window.switchAdminTab('groups')">ניהול קבוצות</div>
+            </div>
+
+            <div id="admin-tab-users">
+                <input type="text" id="admin-search-user" placeholder="חפש משתמש לפי שם או ת.ז" onkeyup="window.filterAdminUsers()">
+                <div id="admin-users-list" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
+
+            <div id="admin-tab-groups" class="hidden">
+                <button class="secondary action-btn-small" style="margin-bottom: 15px;" onclick="window.showCreateGroupModal()">➕ פתח קבוצה חדשה</button>
+                <div id="admin-groups-list" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
+        </section>
+
         <section id="view-instructor" class="hidden">
             <div id="instructor-main">
                 <div class="card">
@@ -163,6 +208,7 @@
                     <div class="tab-container">
                         <div class="tab active" onclick="window.switchTab('sessions')">מפגשים</div>
                         <div class="tab" onclick="window.switchTab('students')">תלמידים (דוחות וניהול)</div>
+                        <div class="tab" onclick="window.switchTab('notices')">לוח מודעות</div>
                     </div>
 
                     <div id="tab-sessions">
@@ -181,19 +227,26 @@
                         </div>
                         <div id="instructor-students-list"></div>
                     </div>
+
+                    <div id="tab-notices" class="hidden">
+                        <button class="secondary action-btn-small" style="margin-bottom: 15px;" onclick="window.showAddNoticeModal()">➕ פרסם הודעה חדשה לחניכים</button>
+                        <div id="instructor-notices-list"></div>
+                    </div>
                 </div>
             </div>
 
             <div id="session-report-view" class="hidden">
                 <div class="card">
                     <div class="action-row" style="justify-content: space-between; align-items: center;">
-                        <div style="display: flex; gap: 8px;">
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                             <button class="outline action-btn-small" onclick="window.backToGroupDetails()">🔙 חזור</button>
                             <button class="outline action-btn-small" onclick="window.showView('view-instructor')">🏠 ראשי</button>
+                            <button id="btn-bypass-gps" class="action-btn-small bg-purple" onclick="window.bypassGpsFor5Mins()">🚀 שחרר מיקום ל-5 דק'</button>
                         </div>
                         <button id="btn-lock-session" class="action-btn-small" style="background: #0f172a;" onclick="window.manualLock()">🔒 סגור רישום</button>
                     </div>
                     <h2 id="report-title">נוכחות חיה</h2>
+                    <p id="bypass-status-text" class="text-orange hidden" style="margin-bottom: 10px; font-weight: bold;"></p>
                     
                     <div class="action-row" style="margin-bottom: 15px;">
                         <button class="outline action-btn-small" onclick="window.copySessionData()">📋 העתק סיכום נוכחות</button>
@@ -207,6 +260,7 @@
 
         <section id="view-student" class="hidden">
             <div id="student-main-dashboard">
+                <div id="student-stats-container" style="margin-bottom: 20px;"></div>
                 <div id="student-active-alerts"></div>
                 <div class="card">
                     <h2>הקורסים שלי</h2>
@@ -254,6 +308,9 @@
     <div id="edit-student-modal" class="modal-overlay hidden">
         <div class="card" style="width: 100%; max-width: 350px; margin: 0;">
             <h3 id="es-name">עדכון חניך</h3>
+            <p id="es-exception-info" style="color: var(--danger-red); font-weight: bold; margin-bottom: 10px;"></p>
+            <label style="font-size: 0.9rem;">דקות איחור (במידה ויש):</label>
+            <input type="number" id="es-late-mins" placeholder="0">
             <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
                 <button class="bg-green" onclick="window.updateStatus('on_time')">נוכח ✅</button>
                 <button class="bg-yellow" onclick="window.updateStatus('late')">איחור ⏰</button>
@@ -289,11 +346,37 @@
         </div>
     </div>
 
+    <div id="add-notice-modal" class="modal-overlay hidden">
+        <div class="card" style="width: 100%; max-width: 400px; margin: 0;">
+            <h3>הודעה חדשה לחניכים</h3>
+            <textarea id="notice-text" rows="4" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 10px;" placeholder="תוכן ההודעה..."></textarea>
+            <button onclick="window.submitNotice()">פרסם הודעה</button>
+            <button class="outline" style="margin-top:10px" onclick="window.closeModals()">ביטול</button>
+        </div>
+    </div>
+
+    <div id="admin-edit-user-modal" class="modal-overlay hidden">
+        <div class="card" style="width: 100%; max-width: 400px; margin: 0;">
+            <h3>עריכת משתמש</h3>
+            <input type="hidden" id="admin-eu-id">
+            <label>שם:</label>
+            <input type="text" id="admin-eu-name">
+            <label>תפקיד:</label>
+            <select id="admin-eu-role">
+                <option value="student">תלמיד</option>
+                <option value="instructor">מדריך</option>
+                <option value="admin">מנהל מערכת</option>
+            </select>
+            <button onclick="window.saveAdminUserEdit()">שמור שינויים</button>
+            <button class="outline" style="margin-top:10px" onclick="window.closeModals()">ביטול</button>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, updateDoc, deleteField, orderBy, serverTimestamp, onSnapshot, arrayUnion, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -309,15 +392,19 @@
         let userData = null, curGroupId = null, curSessionId = null, curEditUid = null;
         let liveUnsubscribe = null, membersCache = [], sessionSort = 'desc', allSessionsCache = [];
         let liveSessionData = null, liveSessionNumber = null;
+        let adminUsersCache = [], bypassInterval = null;
 
         window.toggleDropdown = (e) => { e.stopPropagation(); document.getElementById('profile-dropdown').classList.toggle('show'); };
-        window.closeModals = () => document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+        window.closeModals = () => {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+            document.getElementById('es-exception-info').innerText = "";
+        };
         window.onclick = () => { const dd = document.getElementById('profile-dropdown'); if(dd) dd.classList.remove('show'); };
 
         window.showToast = (message, type = 'success') => {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = `toast ${type === 'success' ? 'bg-green' : 'bg-yellow'}`;
+            toast.className = `toast ${type === 'success' ? 'bg-green' : (type === 'error' ? 'bg-red' : 'bg-yellow')}`;
             toast.innerText = message;
             container.appendChild(toast);
             setTimeout(() => toast.classList.add('show'), 10);
@@ -337,8 +424,13 @@
                     document.getElementById('user-display-name').innerText = userData.fullName;
                     document.getElementById('app-header').classList.remove('hidden');
                     
-                    if (userData.role === 'admin') {
-                        // Admin view stub
+                    // Super Admin recognition by email or role
+                    const isAdmin = (user.email && user.email.toLowerCase() === 'anfinityroot@gmail.com') || userData.role === 'admin';
+                    
+                    if (isAdmin) {
+                        document.getElementById('nav-admin-btn').classList.remove('hidden');
+                        window.showView('view-admin'); 
+                        window.loadAdminMain();
                     } else if (userData.role === 'instructor') {
                         window.showView('view-instructor'); window.loadInstructorMain();
                     } else {
@@ -351,15 +443,111 @@
             }
         });
 
+        // --- Profile Logic ---
+        window.showProfileView = () => {
+            document.getElementById('prof-name').value = userData.fullName || '';
+            document.getElementById('prof-email').value = auth.currentUser.email || '';
+            document.getElementById('prof-new-pass').value = '';
+            window.showView('view-profile');
+        };
+
+        window.updateUserPassword = async () => {
+            const newPass = document.getElementById('prof-new-pass').value;
+            if (newPass.length < 6) return alert("סיסמה חייבת להיות לפחות 6 תווים.");
+            try {
+                await updatePassword(auth.currentUser, newPass);
+                window.showToast("הסיסמה עודכנה בהצלחה!");
+                document.getElementById('prof-new-pass').value = '';
+            } catch (error) {
+                alert("שגיאה בעדכון הסיסמה: ייתכן שנדרש להתנתק ולהתחבר מחדש כדי לבצע פעולה זו.");
+            }
+        };
+
+        window.goBackToMain = () => {
+            const isAdmin = (auth.currentUser.email && auth.currentUser.email.toLowerCase() === 'anfinityroot@gmail.com') || userData.role === 'admin';
+            if (isAdmin) { window.showView('view-admin'); window.loadAdminMain(); }
+            else if (userData.role === 'instructor') { window.showView('view-instructor'); window.loadInstructorMain(); }
+            else { window.showView('view-student'); window.loadStudentMain(); }
+        };
+
+        // --- Admin Logic ---
+        window.showAdminView = () => { window.showView('view-admin'); window.loadAdminMain(); };
+        window.switchAdminTab = (t) => {
+            document.querySelectorAll('#view-admin .tab').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('admin-tab-users').classList.toggle('hidden', t !== 'users');
+            document.getElementById('admin-tab-groups').classList.toggle('hidden', t !== 'groups');
+            if(t === 'users') window.loadAdminUsers();
+            if(t === 'groups') window.loadAdminGroups();
+        };
+
+        window.loadAdminMain = () => { window.switchAdminTab('users'); };
+
+        window.loadAdminUsers = async () => {
+            const list = document.getElementById('admin-users-list'); list.innerHTML = "טוען משתמשים...";
+            const snaps = await getDocs(collection(db, "users"));
+            adminUsersCache = snaps.docs.map(d => ({id: d.id, ...d.data()}));
+            window.renderAdminUsers(adminUsersCache);
+        };
+
+        window.renderAdminUsers = (usersArray) => {
+            const list = document.getElementById('admin-users-list'); list.innerHTML = "";
+            let html = `<table><tr><th>שם</th><th>ת.ז</th><th>תפקיד</th><th>פעולות</th></tr>`;
+            usersArray.forEach(u => {
+                let roleHe = u.role === 'admin' ? 'מנהל' : (u.role === 'instructor' ? 'מדריך' : 'תלמיד');
+                html += `<tr>
+                    <td>${u.fullName}</td><td>${u.idNumber || '-'}</td><td>${roleHe}</td>
+                    <td><button class="action-btn-small outline" onclick="window.editAdminUser('${u.id}')">ערוך</button></td>
+                </tr>`;
+            });
+            html += `</table>`;
+            list.innerHTML = html;
+        };
+
+        window.filterAdminUsers = () => {
+            const q = document.getElementById('admin-search-user').value.toLowerCase();
+            const filtered = adminUsersCache.filter(u => u.fullName.toLowerCase().includes(q) || (u.idNumber && u.idNumber.includes(q)));
+            window.renderAdminUsers(filtered);
+        };
+
+        window.editAdminUser = (uid) => {
+            const u = adminUsersCache.find(x => x.id === uid);
+            if(!u) return;
+            document.getElementById('admin-eu-id').value = uid;
+            document.getElementById('admin-eu-name').value = u.fullName;
+            document.getElementById('admin-eu-role').value = u.role || 'student';
+            document.getElementById('admin-edit-user-modal').classList.remove('hidden');
+        };
+
+        window.saveAdminUserEdit = async () => {
+            const uid = document.getElementById('admin-eu-id').value;
+            const name = document.getElementById('admin-eu-name').value;
+            const role = document.getElementById('admin-eu-role').value;
+            await updateDoc(doc(db, "users", uid), { fullName: name, role: role });
+            window.closeModals(); window.showToast("המשתמש עודכן!"); window.loadAdminUsers();
+        };
+
+        window.loadAdminGroups = async () => {
+            const list = document.getElementById('admin-groups-list'); list.innerHTML = "טוען קבוצות...";
+            const snaps = await getDocs(collection(db, "groups"));
+            list.innerHTML = "";
+            snaps.forEach(d => {
+                const g = d.data();
+                const div = document.createElement('div'); div.className = "card list-item";
+                div.innerHTML = `
+                    <div><strong>${g.name}</strong><br><span class="small-date">חניכים: ${g.members?.length||0}</span></div>
+                    <button class="icon-btn" title="מחק קבוצה" onclick="window.deleteGroup('${d.id}', event)">🗑️</button>
+                `;
+                list.appendChild(div);
+            });
+        };
+
         // --- Auth Logic ---
         document.getElementById('form-login').onsubmit = async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-login-submit'); btn.disabled = true; btn.innerText = "מתחבר...";
             let loginInput = document.getElementById('login-email').value.trim();
-            // אם המשתמש הזין רק ת.ז (מספרים ללא @), נשלים עבורו לכתובת המערכת
-            if(!loginInput.includes('@')) {
-                loginInput = loginInput + '@mada.system.local';
-            }
+            if(!loginInput.includes('@')) { loginInput = loginInput + '@mada.system.local'; }
             try { 
                 await signInWithEmailAndPassword(auth, loginInput, document.getElementById('login-pass').value); 
             } catch { 
@@ -373,7 +561,7 @@
             const id = document.getElementById('reg-id').value.trim();
             const name = document.getElementById('reg-name').value.trim();
             const pass = document.getElementById('reg-pass').value;
-            const email = id + '@mada.system.local'; // יצירת אימייל וירטואלי מבוסס ת.ז
+            const email = id + '@mada.system.local'; 
 
             try {
                 const cred = await createUserWithEmailAndPassword(auth, email, pass);
@@ -392,7 +580,6 @@
             const cont = document.getElementById('instructor-groups-container');
             cont.innerHTML = "טוען...";
             
-            // שליפת קבוצות - מנהל ראשי או מדריך שותף
             const q1 = await getDocs(query(collection(db, "groups"), where("instructorId", "==", auth.currentUser.uid)));
             const q2 = await getDocs(query(collection(db, "groups"), where("coInstructors", "array-contains", auth.currentUser.uid)));
             
@@ -421,7 +608,8 @@
             if(confirm("אזהרה: מחיקת קבוצה תמחק את כולה ללא אפשרות שחזור. האם אתה בטוח?")) {
                 await deleteDoc(doc(db, "groups", gid));
                 window.showToast("הקבוצה נמחקה.");
-                window.loadInstructorMain();
+                const isAdmin = (auth.currentUser.email && auth.currentUser.email.toLowerCase() === 'anfinityroot@gmail.com') || userData.role === 'admin';
+                if(isAdmin) window.loadAdminGroups(); else window.loadInstructorMain();
             }
         };
 
@@ -436,7 +624,9 @@
             await addDoc(collection(db, "groups"), { 
                 name, instructorId: auth.currentUser.uid, coInstructors: [], members: [], createdAt: serverTimestamp() 
             });
-            window.closeModals(); window.loadInstructorMain(); window.showToast('הקבוצה נוצרה בהצלחה!');
+            window.closeModals(); window.showToast('הקבוצה נוצרה בהצלחה!');
+            const isAdmin = (auth.currentUser.email && auth.currentUser.email.toLowerCase() === 'anfinityroot@gmail.com') || userData.role === 'admin';
+            if(isAdmin) window.loadAdminGroups(); else window.loadInstructorMain();
         };
 
         window.openGroup = async (id, name) => {
@@ -446,6 +636,7 @@
             document.getElementById('instructor-group-details').classList.remove('hidden');
             document.getElementById('group-name-header').innerText = name;
             window.loadSessions();
+            window.loadNotices();
         };
 
         window.loadSessions = async () => {
@@ -521,17 +712,24 @@
             for(let uid of uids) {
                 const u = await getDoc(doc(db, "users", uid));
                 if(u.exists()) {
-                    let present = 0;
-                    allSessionsCache.forEach(s => { if(s.attendance?.[uid]) present++; });
+                    let present = 0, lateMins = 0;
+                    allSessionsCache.forEach(s => { 
+                        if(s.attendance?.[uid]) {
+                            present++; 
+                            if(s.attendance[uid].minutes) lateMins += s.attendance[uid].minutes;
+                        }
+                    });
                     const pct = allSessionsCache.length ? Math.round((present/allSessionsCache.length)*100) : 0;
                     
                     let colorClass = 'text-green';
                     if(pct < 50) colorClass = 'text-red';
                     else if(pct < 80) colorClass = 'text-orange';
 
-                    membersCache.push({uid, name: u.data().fullName, pct});
+                    let lateTxt = lateMins > 0 ? ` <span style="font-size:0.8rem; color:var(--warning-orange);">(${lateMins} דק' איחור)</span>` : '';
+
+                    membersCache.push({uid, name: u.data().fullName, pct, lateMins});
                     const div = document.createElement('div'); div.className = "list-item clickable";
-                    div.innerHTML = `<span>${u.data().fullName}</span> <strong class="${colorClass}">${pct}% נוכחות</strong>`;
+                    div.innerHTML = `<span>${u.data().fullName}</span> <strong class="${colorClass}">${pct}% נוכחות${lateTxt}</strong>`;
                     div.onclick = () => window.showStudentHistory(uid, u.data().fullName);
                     list.appendChild(div);
                 }
@@ -542,18 +740,18 @@
             if(membersCache.length === 0 || allSessionsCache.length === 0) return alert('אין מספיק נתונים לדוח');
             let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
             
-            let header = ["שם תלמיד", "אחוז נוכחות כולל"];
+            let header = ["שם תלמיד", "אחוז נוכחות כולל", "סהכ דקות איחור"];
             allSessionsCache.forEach(s => header.push(`מפגש ${s.sessionNumber}`));
             csvContent += header.join(",") + "\r\n";
 
             membersCache.forEach(m => {
-                let row = [m.name, `${m.pct}%`];
+                let row = [m.name, `${m.pct}%`, m.lateMins];
                 allSessionsCache.forEach(s => {
                     const att = s.attendance?.[m.uid];
                     let stat = "חיסור";
                     if(att) {
                         if(att.status === 'on_time') stat = "נוכח";
-                        else if(att.status === 'late') stat = "איחור";
+                        else if(att.status === 'late') stat = `איחור (${att.minutes||0} דק')`;
                         else if(att.status === 'excused') stat = "באישור";
                     }
                     row.push(stat);
@@ -578,7 +776,7 @@
                 let t = "חיסור", c = "bg-red";
                 if(att) {
                     if(att.status==='on_time'){ t="נוכח"; c="bg-green"; }
-                    else if(att.status==='late'){ t="איחור"; c="bg-yellow"; }
+                    else if(att.status==='late'){ t=`איחור (${att.minutes||0} דק')`; c="bg-yellow"; }
                     else if(att.status==='excused'){ t="באישור"; c="bg-blue"; }
                 }
                 list.innerHTML += `<div class="list-item"><span>מפגש ${s.sessionNumber}</span><span class="status-tag ${c}">${t}</span></div>`;
@@ -605,14 +803,31 @@
             document.getElementById('session-report-view').classList.remove('hidden');
             document.getElementById('report-title').innerText = `מפגש ${snum}`;
             document.getElementById('btn-lock-session').classList.toggle('hidden', status !== 'open');
+            document.getElementById('btn-bypass-gps').classList.toggle('hidden', status !== 'open');
+            
             if(liveUnsubscribe) liveUnsubscribe();
             liveUnsubscribe = onSnapshot(doc(db, "groups", curGroupId, "sessions", sid), (snap) => {
                 liveSessionData = snap.data();
+                
+                // GPS Bypass Indicator
+                if (liveSessionData.gpsBypassUntil && liveSessionData.gpsBypassUntil > Date.now()) {
+                    const secs = Math.round((liveSessionData.gpsBypassUntil - Date.now())/1000);
+                    document.getElementById('bypass-status-text').innerText = `מצב מעקף מיקום פעיל לעוד ${secs} שניות`;
+                    document.getElementById('bypass-status-text').classList.remove('hidden');
+                } else {
+                    document.getElementById('bypass-status-text').classList.add('hidden');
+                }
+
                 renderReport(liveSessionData);
             });
         };
 
-        // העתקה מהירה מתוך מפגש
+        window.bypassGpsFor5Mins = async () => {
+            const until = Date.now() + (5 * 60 * 1000);
+            await updateDoc(doc(db, "groups", curGroupId, "sessions", curSessionId), { gpsBypassUntil: until });
+            window.showToast("בדיקת מיקום בוטלה ל-5 דקות הבאות", "success");
+        };
+
         window.copySessionData = () => {
             if(!liveSessionData) return;
             let present=[], late=[], excused=[], absent=[];
@@ -621,7 +836,7 @@
                 const att = liveSessionData.attendance?.[student.uid];
                 if(att) {
                     if(att.status === 'on_time') present.push(student.name);
-                    else if(att.status === 'late') late.push(student.name);
+                    else if(att.status === 'late') late.push(`${student.name} (${att.minutes||0} דק')`);
                     else if(att.status === 'excused') excused.push(student.name);
                 } else {
                     absent.push(student.name);
@@ -637,21 +852,21 @@
             navigator.clipboard.writeText(txt).then(() => window.showToast("הנתונים הועתקו ללוח!"));
         };
 
-        // הורדת CSV של מפגש ספציפי
         window.downloadSessionCSV = () => {
             if(!liveSessionData) return;
             let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; 
-            csvContent += `שם תלמיד,סטטוס\r\n`;
+            csvContent += `שם תלמיד,סטטוס,מרחק(מטרים)\r\n`;
 
             membersCache.forEach(student => {
                 const att = liveSessionData.attendance?.[student.uid];
-                let stat = "חיסור";
+                let stat = "חיסור", dist = "";
                 if(att) {
                     if(att.status === 'on_time') stat = "נוכח";
-                    else if(att.status === 'late') stat = "איחור";
+                    else if(att.status === 'late') stat = `איחור (${att.minutes||0} דק')`;
                     else if(att.status === 'excused') stat = "באישור";
+                    if(att.distance) dist = att.distance;
                 }
-                csvContent += `${student.name},${stat}\r\n`;
+                csvContent += `${student.name},${stat},${dist}\r\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
@@ -670,24 +885,44 @@
             sorted.forEach(student => {
                 const att = sdata.attendance?.[student.uid];
                 const exc = sdata.exceptions?.[student.uid];
-                let txt = "טרם נרשם", cls = "bg-blink-warn";
+                let txt = "טרם נרשם", cls = "bg-blink-warn", distTxt = "";
                 
                 if(exc && !exc.snoozed) {
-                    txt = exc.type === 'manual_request' ? "בקשה חריגה ✋" : `חריג (${exc.distance}מ')`;
-                    cls = "bg-blink-warn";
+                    if(exc.type === 'manual_request') {
+                        txt = "בקשה חריגה ✋"; 
+                        cls = exc.viewed ? "bg-blink-warn" : "bg-blink-intense";
+                    } else {
+                        txt = `חריג (${exc.distance}מ')`;
+                        cls = "bg-blink-warn";
+                    }
                 }
                 else if(exc?.snoozed) { txt = "לטיפול (חסר)"; cls = "bg-absent-static"; }
                 else if(att) {
+                    if(att.distance) distTxt = ` <span style="font-size:0.75rem; font-weight:normal;">(${att.distance}מ')</span>`;
                     if(att.status==='on_time') { txt="נוכח"; cls="bg-green"; }
-                    else if(att.status==='late') { txt="איחור"; cls="bg-yellow"; }
+                    else if(att.status==='late') { txt=`איחור (${att.minutes||0}דק')`; cls="bg-yellow"; }
                     else if(att.status==='excused') { txt="באישור"; cls="bg-blue"; }
                 } else if(sdata.status === 'closed') { txt = "חיסור"; cls = "bg-absent-static"; }
 
                 const div = document.createElement('div'); div.className = `list-item clickable ${cls}`;
-                div.innerHTML = `<span style="font-weight:500;">${student.name}</span><strong>${txt}</strong>`;
-                div.onclick = () => {
+                div.innerHTML = `<span style="font-weight:500;">${student.name}</span><strong>${txt}${distTxt}</strong>`;
+                
+                div.onclick = async () => {
+                    // Logic for Instructor checking an intense blinker request
+                    if (exc && exc.type === 'manual_request' && !exc.viewed) {
+                        alert(`בקשה חריגה מאת ${student.name}.\nהרישום נכשל עקב בעיית מיקום או מרחק.\nמרחק שנמדד (אם קיים): ${exc.distance || 'לא צוין'}`);
+                        await updateDoc(doc(db, "groups", curGroupId, "sessions", curSessionId), { [`exceptions.${student.uid}.viewed`]: true });
+                        return; // Stop here so it goes back to normal list before editing
+                    }
+
                     curEditUid = student.uid;
                     document.getElementById('es-name').innerText = student.name;
+                    document.getElementById('es-late-mins').value = (att && att.minutes) ? att.minutes : '';
+                    
+                    if(exc && exc.type === 'manual_request') {
+                        document.getElementById('es-exception-info').innerText = `* התלמיד ביקש אישור ידני (מרחק: ${exc.distance||'לא זמין'})`;
+                    }
+
                     document.getElementById('btn-snooze-action').classList.toggle('hidden', !!att || (exc && exc.snoozed));
                     document.getElementById('edit-student-modal').classList.remove('hidden');
                 };
@@ -697,6 +932,7 @@
 
         function getRank(uid, sdata) {
             const att = sdata.attendance?.[uid]; const exc = sdata.exceptions?.[uid];
+            if(exc && !exc.snoozed && exc.type === 'manual_request' && !exc.viewed) return -1; // Top priority
             if(exc && !exc.snoozed) return 0;
             if(!att && !exc) return 1;
             if(exc?.snoozed) return 2;
@@ -705,8 +941,15 @@
 
         window.updateStatus = async (type) => {
             const ref = doc(db, "groups", curGroupId, "sessions", curSessionId);
-            if(type === 'absent') await updateDoc(ref, { [`attendance.${curEditUid}`]: deleteField(), [`exceptions.${curEditUid}`]: deleteField() });
-            else await updateDoc(ref, { [`attendance.${curEditUid}`]: { status: type, timestamp: serverTimestamp() }, [`exceptions.${curEditUid}`]: deleteField() });
+            let mins = parseInt(document.getElementById('es-late-mins').value) || 0;
+            
+            if(type === 'absent') {
+                await updateDoc(ref, { [`attendance.${curEditUid}`]: deleteField(), [`exceptions.${curEditUid}`]: deleteField() });
+            } else {
+                let dataToSave = { status: type, timestamp: serverTimestamp() };
+                if (type === 'late' && mins > 0) dataToSave.minutes = mins;
+                await updateDoc(ref, { [`attendance.${curEditUid}`]: dataToSave, [`exceptions.${curEditUid}`]: deleteField() });
+            }
             window.closeModals();
         };
 
@@ -718,6 +961,8 @@
         window.manualLock = async () => {
             await updateDoc(doc(db, "groups", curGroupId, "sessions", curSessionId), { status: 'closed' });
             window.backToGroupDetails();
+            alert("הרישום נסגר בהצלחה");
+            window.location.reload();
         };
 
         window.submitNewSession = async (e) => {
@@ -735,19 +980,81 @@
             }, () => { btn.disabled = false; btn.innerText = "הפעל ודגום מיקום 📍"; alert("GPS חובה לפתיחת מפגש. ודא שהמיקום דלוק בדפדפן."); }, {enableHighAccuracy: true});
         };
 
+        // --- Notice Board Logic (Instructor) ---
+        window.loadNotices = async () => {
+            const list = document.getElementById('instructor-notices-list'); list.innerHTML = "טוען...";
+            const snaps = await getDocs(query(collection(db, "groups", curGroupId, "notices"), orderBy("createdAt", "desc")));
+            list.innerHTML = "";
+            snaps.forEach(d => {
+                const n = d.data();
+                const dateStr = n.createdAt ? n.createdAt.toDate().toLocaleDateString('he-IL') : '';
+                const reads = n.readBy ? n.readBy.length : 0;
+                list.innerHTML += `<div class="card" style="padding:15px; margin-bottom:10px;">
+                    <p style="margin-bottom:8px;">${n.text}</p>
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--muted-gray);">
+                        <span>${dateStr}</span><span>נקרא ע"י: ${reads} חניכים</span>
+                    </div>
+                </div>`;
+            });
+        };
+
+        window.showAddNoticeModal = () => {
+            document.getElementById('notice-text').value = '';
+            document.getElementById('add-notice-modal').classList.remove('hidden');
+        };
+
+        window.submitNotice = async () => {
+            const txt = document.getElementById('notice-text').value.trim();
+            if(!txt) return alert("אנא הזן תוכן");
+            await addDoc(collection(db, "groups", curGroupId, "notices"), {
+                text: txt, createdAt: serverTimestamp(), readBy: []
+            });
+            window.closeModals(); window.showToast("הודעה פורסמה!"); window.loadNotices();
+        };
+
         // --- Student Logic ---
         window.loadStudentMain = async () => {
             const alerts = document.getElementById('student-active-alerts');
             const cont = document.getElementById('student-groups-container');
+            const statsCont = document.getElementById('student-stats-container');
+            
             const snaps = await getDocs(query(collection(db, "groups"), where("members", "array-contains", auth.currentUser.uid)));
             cont.innerHTML = snaps.empty ? "לא רשום לקורסים" : ""; alerts.innerHTML = "";
+            
+            let totalSessions = 0; let totalPresent = 0; let totalLateMins = 0;
+
             for(const gd of snaps.docs) {
-                const sSnaps = await getDocs(query(collection(db, "groups", gd.id, "sessions"), where("status", "==", "open")));
+                // Fetch notices for student
+                const noticeSnaps = await getDocs(query(collection(db, "groups", gd.id, "notices")));
+                noticeSnaps.forEach(nd => {
+                    const n = nd.data();
+                    if(!n.readBy || !n.readBy.includes(auth.currentUser.uid)) {
+                        alerts.innerHTML += `<div class="card bg-blink-warn" style="margin-bottom:15px; padding:20px; border-color:var(--info-blue);">
+                            <strong style="display:block; margin-bottom:10px; font-size:1.1rem; color:var(--info-blue);">📩 הודעה חדשה ממדריך (${gd.data().name})</strong>
+                            <p style="margin-bottom:15px;">${n.text}</p>
+                            <button class="secondary" onclick="window.approveNotice('${gd.id}','${nd.id}', event)">קראתי ואישרתי ✔️</button>
+                        </div>`;
+                    }
+                });
+
+                // Fetch sessions for stats & open alerts
+                const sSnaps = await getDocs(collection(db, "groups", gd.id, "sessions"));
                 sSnaps.forEach(sd => {
-                    if(!sd.data().attendance?.[auth.currentUser.uid]) {
+                    const session = sd.data();
+                    totalSessions++;
+                    const myAtt = session.attendance?.[auth.currentUser.uid];
+                    
+                    if(myAtt) {
+                        totalPresent++;
+                        if(myAtt.minutes) totalLateMins += myAtt.minutes;
+                    }
+
+                    if(session.status === "open" && !myAtt) {
+                        let expectedTxt = session.expectedStartTime ? ` | שעת התחלה: ${session.expectedStartTime}` : "";
                         alerts.innerHTML += `<div class="card bg-blink-warn" style="margin-bottom:15px; padding:20px;">
                             <strong style="display:block; margin-bottom:10px; font-size:1.1rem;">מפגש פתוח: ${gd.data().name}</strong>
-                            <button onclick="window.startAttendProcess('${gd.id}','${sd.id}',${sd.data().instructorLocation.lat},${sd.data().instructorLocation.lng},'${sd.data().expectedStartTime}',0, event)">דווח נוכחות 📍</button>
+                            <p style="margin-bottom:10px; font-weight:bold;">מפגש מס' ${session.sessionNumber}${expectedTxt}</p>
+                            <button onclick="window.startAttendProcess('${gd.id}','${sd.id}',${session.instructorLocation.lat},${session.instructorLocation.lng},'${session.expectedStartTime}',0, event)">דווח נוכחות 📍</button>
                         </div>`;
                     }
                 });
@@ -757,6 +1064,31 @@
                 div.onclick = () => window.openStudentGroup(gd.id, gd.data().name);
                 cont.appendChild(div);
             }
+
+            // Render Student Stats
+            if(totalSessions > 0) {
+                const pct = Math.round((totalPresent/totalSessions)*100);
+                let color = "var(--success-green)"; let msg = "כל הכבוד! המשך כך! 🚀";
+                if(pct < 50) { color = "var(--danger-red)"; msg = "שים לב, הנוכחות שלך נמוכה, כדי לעבור את הקורס עליך להשתפר!"; }
+                else if(pct < 80) { color = "var(--warning-orange)"; msg = "אתה בדרך הנכונה, אך השתדל לא לפספס מפגשים נוספים."; }
+
+                statsCont.innerHTML = `
+                    <div class="card" style="border-top: 4px solid ${color};">
+                        <h3 style="margin-bottom: 5px;">סטטיסטיקת נוכחות אישית</h3>
+                        <p style="font-size: 1.5rem; font-weight: bold; color: ${color};">${pct}% <span style="font-size:1rem; font-weight:normal; color:var(--dark-blue);">(${totalPresent}/${totalSessions} מפגשים)</span></p>
+                        ${totalLateMins > 0 ? `<p style="color:var(--warning-orange); font-size:0.95rem; margin-top:5px;">סה"כ זמן איחורים: <strong>${totalLateMins} דקות</strong></p>` : ''}
+                        <p style="margin-top: 10px; font-size: 0.95rem; font-weight: 500;">💡 ${msg}</p>
+                    </div>
+                `;
+            } else {
+                statsCont.innerHTML = "";
+            }
+        };
+
+        window.approveNotice = async (gid, nid, e) => {
+            e.target.disabled = true; e.target.innerText = "מאשר...";
+            await updateDoc(doc(db, "groups", gid, "notices", nid), { readBy: arrayUnion(auth.currentUser.uid) });
+            window.loadStudentMain();
         };
 
         window.openStudentGroup = async (gid, name) => {
@@ -775,7 +1107,7 @@
                 let t = s.status === 'open' ? 'פתוח' : 'חיסור', c = s.status === 'open' ? 'bg-blink-warn' : 'bg-red';
                 if(att) {
                     if(att.status==='on_time'){ t="נוכח"; c="bg-green"; }
-                    else if(att.status==='late'){ t="איחור"; c="bg-yellow"; }
+                    else if(att.status==='late'){ t=`איחור (${att.minutes||0}דק')`; c="bg-yellow"; }
                     else if(att.status==='excused'){ t="באישור"; c="bg-blue"; }
                 }
                 list.innerHTML += `<div class="list-item"><span>מפגש ${s.sessionNumber}</span><span class="status-tag ${c}">${t}</span></div>`;
@@ -787,10 +1119,37 @@
             document.getElementById('student-main-dashboard').classList.remove('hidden');
         };
 
-        window.startAttendProcess = (gid, sid, iLat, iLng, start, retryCount, event) => {
+        window.startAttendProcess = async (gid, sid, iLat, iLng, start, retryCount, event) => {
             const btn = event.target; btn.disabled = true; btn.innerText = "מעבד...";
             
-            const failProcess = () => {
+            // Fetch session data to check for bypass
+            const sessionDoc = await getDoc(doc(db, "groups", gid, "sessions", sid));
+            const sessionData = sessionDoc.data();
+            const bypassActive = sessionData.gpsBypassUntil && sessionData.gpsBypassUntil > Date.now();
+
+            let stat = 'on_time'; let lateMinutes = 0;
+            if(start) {
+                const [h, m] = start.split(':'); const limit = new Date(); limit.setHours(h, Number(m)+15, 0);
+                if(new Date() > limit) {
+                    stat = 'late';
+                    lateMinutes = Math.floor((new Date() - limit) / 60000);
+                }
+            }
+            
+            const processSuccess = async (distanceStr, overrideMins) => {
+                let dataToSave = { status: stat, timestamp: serverTimestamp(), distance: distanceStr };
+                if (stat === 'late') dataToSave.minutes = lateMinutes;
+                
+                await updateDoc(doc(db, "groups", gid, "sessions", sid), { 
+                    [`attendance.${auth.currentUser.uid}`]: dataToSave, 
+                    [`exceptions.${auth.currentUser.uid}`]: deleteField() 
+                });
+                if(stat === 'on_time') window.showToast('כל הכבוד! הגעת בזמן! 🎉', 'success');
+                else window.showToast(`הפעם הגעת באיחור של ${lateMinutes} דקות ⏰, השתדל לדייק!`, 'error');
+                window.loadStudentMain();
+            };
+
+            const failProcess = (distCalc) => {
                 btn.disabled = false; btn.innerText = "דווח נוכחות 📍";
                 if(retryCount === 0) {
                     document.getElementById('btn-send-exception').classList.add('hidden');
@@ -799,37 +1158,35 @@
                 } else {
                     document.getElementById('btn-send-exception').classList.remove('hidden');
                     document.getElementById('btn-retry-location').onclick = (e) => { window.closeModals(); window.startAttendProcess(gid, sid, iLat, iLng, start, 1, event); };
-                    document.getElementById('btn-send-exception').onclick = () => window.sendExceptionRequest(gid, sid);
+                    document.getElementById('btn-send-exception').onclick = () => window.sendExceptionRequest(gid, sid, distCalc);
                     document.getElementById('location-retry-modal').classList.remove('hidden');
                 }
             };
 
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const R = 6371e3; const dLat = (pos.coords.latitude - iLat) * Math.PI / 180; const dLon = (pos.coords.longitude - iLng) * Math.PI / 180;
-                const a = Math.sin(dLat/2)**2 + Math.cos(iLat*Math.PI/180)*Math.cos(pos.coords.latitude*Math.PI/180)*Math.sin(dLon/2)**2;
-                const dist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-                let stat = 'on_time';
-                if(start) {
-                    const [h, m] = start.split(':'); const limit = new Date(); limit.setHours(h, Number(m)+15);
-                    if(new Date() > limit) stat = 'late';
-                }
-                const ref = doc(db, "groups", gid, "sessions", sid);
-                
-                if(dist <= 100) {
-                    await updateDoc(ref, { [`attendance.${auth.currentUser.uid}`]: { status: stat, timestamp: serverTimestamp() }, [`exceptions.${auth.currentUser.uid}`]: deleteField() });
-                    if(stat === 'on_time') window.showToast('כל הכבוד! הגעת בזמן! 🎉', 'success');
-                    else window.showToast('הפעם הגעת באיחור ⏰, נשמח לראותך בזמן במפגש הבא!', 'error');
-                    window.loadStudentMain();
-                } else {
-                    failProcess();
-                }
-            }, failProcess, {enableHighAccuracy: true, timeout: 8000});
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const R = 6371e3; const dLat = (pos.coords.latitude - iLat) * Math.PI / 180; const dLon = (pos.coords.longitude - iLng) * Math.PI / 180;
+                    const a = Math.sin(dLat/2)**2 + Math.cos(iLat*Math.PI/180)*Math.cos(pos.coords.latitude*Math.PI/180)*Math.sin(dLon/2)**2;
+                    const dist = Math.round(R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+                    
+                    if(dist <= 100 || bypassActive) {
+                        processSuccess(dist.toString());
+                    } else {
+                        failProcess(dist);
+                    }
+                }, 
+                () => { 
+                    if(bypassActive) { processSuccess('לא נדגם'); } 
+                    else { failProcess('לא נדגם'); }
+                }, 
+                {enableHighAccuracy: true, timeout: bypassActive ? 3000 : 8000} // short timeout if bypass is on
+            );
         };
 
-        window.sendExceptionRequest = async (gid, sid) => {
+        window.sendExceptionRequest = async (gid, sid, distCalculated) => {
             document.getElementById('btn-send-exception').innerText = "שולח...";
             await updateDoc(doc(db, "groups", gid, "sessions", sid), { 
-                [`exceptions.${auth.currentUser.uid}`]: { status: 'pending', type: 'manual_request', timestamp: serverTimestamp() } 
+                [`exceptions.${auth.currentUser.uid}`]: { status: 'pending', type: 'manual_request', distance: distCalculated, timestamp: serverTimestamp(), viewed: false } 
             });
             window.closeModals();
             window.showToast('בקשה חריגה נשלחה למדריך ✋', 'success');
@@ -844,10 +1201,11 @@
             if(id === 'view-student') document.getElementById('student-main-dashboard').classList.remove('hidden');
         };
         window.switchTab = (t) => {
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('#instructor-group-details .tab').forEach(el => el.classList.remove('active'));
             event.target.classList.add('active');
             document.getElementById('tab-sessions').classList.toggle('hidden', t !== 'sessions');
             document.getElementById('tab-students').classList.toggle('hidden', t !== 'students');
+            document.getElementById('tab-notices').classList.toggle('hidden', t !== 'notices');
         };
         window.toggleSort = () => { sessionSort = sessionSort === 'desc' ? 'asc' : 'desc'; window.loadSessions(); };
         window.backToGroupDetails = () => { document.getElementById('session-report-view').classList.add('hidden'); document.getElementById('instructor-group-details').classList.remove('hidden'); };
