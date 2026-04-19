@@ -1311,11 +1311,11 @@
                 } else { absent.push(student.name); }
             });
             let txt = `דוח נוכחות - מפגש ${state.liveSessionNumber}\n\n`;
-            txt += `✅ נוכחים:\n${present.length > 0 ? present.join('\n') : 'אין'}\n\n`;
-            txt += `⏰ מאחרים:\n${late.length > 0 ? late.join('\n') : 'אין'}\n\n`;
-            txt += `🟦 באישור:\n${excused.length > 0 ? excused.join('\n') : 'אין'}\n\n`;
-            txt += `❌ חיסור:\n${absent.length > 0 ? absent.join('\n') : 'אין'}`;
-            navigator.clipboard.writeText(txt).then(() => showToast("הנתונים הועתקו ללוח!"));
+            txt += `*✅ חניכים שנכחו:*\n${present.length > 0 ? present.join('\n') : 'אין'}\n\n`;
+            txt += `*⏰ חניכים שאיחרו:*\n${late.length > 0 ? late.join('\n') : 'אין'}\n\n`;
+            txt += `*🟦 חיסרו באישור:*\n${excused.length > 0 ? excused.join('\n') : 'אין'}\n\n`;
+            txt += `*❌ לא הגיעו:*\n${absent.length > 0 ? absent.join('\n') : 'אין'}`;
+            navigator.clipboard.writeText(txt).then(() => showToast("הנתונים הועתקו ללוח ומוכנים להדבקה מהירה!"));
         }
 
         function downloadSessionCSV() {
