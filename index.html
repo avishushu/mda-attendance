@@ -459,31 +459,46 @@
             document.getElementById('register-section').classList.toggle('hidden', !isRegister);
         };
 
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const uDoc = await getDoc(doc(db, "users", user.uid));
-                if(uDoc.exists()) {
-                    userData = uDoc.data();
-                    document.getElementById('user-display-name').innerText = userData.fullName;
-                    document.getElementById('app-header').classList.remove('hidden');
-                    
-                    const isAdmin = (user.email && user.email.toLowerCase() === 'anfinityroot@gmail.com') || userData.role === 'admin';
-                    
-                    if (isAdmin) {
-                        document.getElementById('nav-admin-btn').classList.remove('hidden');
-                        window.showView('view-admin'); 
-                        window.loadAdminMain();
-                    } else if (userData.role === 'instructor') {
-                        window.showView('view-instructor'); window.loadInstructorMain();
-                    } else {
-                        window.showView('view-student'); window.loadStudentMain();
-                    }
+        // הקוד המתוקן - להדביק כאן:
+onAuthStateChanged(auth, async (user) => {
+    try {
+        if (user) {
+            const uDoc = await getDoc(doc(db, "users", user.uid));
+            if(uDoc.exists()) {
+                userData = uDoc.data();
+                document.getElementById('user-display-name').innerText = userData.fullName;
+                document.getElementById('app-header').classList.remove('hidden');
+                
+                const isAdmin = (user.email && user.email.toLowerCase() === 'anfinityroot@gmail.com') || userData.role === 'admin';
+                
+                if (isAdmin) {
+                    document.getElementById('nav-admin-btn').classList.remove('hidden');
+                    window.showView('view-admin'); 
+                    window.loadAdminMain();
+                } else if (userData.role === 'instructor') {
+                    window.showView('view-instructor'); 
+                    window.loadInstructorMain();
+                } else {
+                    window.showView('view-student'); 
+                    window.loadStudentMain();
                 }
             } else {
+                // מקרה שבו המשתמש קיים ב-Auth אבל לא מצאנו אותו ב-Database
                 window.showView('view-auth');
-                document.getElementById('app-header').classList.add('hidden');
-                hideSplashScreen();
             }
+        } else {
+            // משתמש מנותק - מציגים מסך התחברות
+            window.showView('view-auth');
+            document.getElementById('app-header').classList.add('hidden');
+        }
+    } catch (error) {
+        console.error("שגיאה בטעינת נתוני משתמש:", error);
+        window.showView('view-auth');
+    } finally {
+        // השורה הכי חשובה: מעלימה את מסך הפתיחה בכל מצב
+        hideSplashScreen();
+    }
+
         });
 
         // --- Profile Logic ---
