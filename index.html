@@ -40,11 +40,16 @@
         h2 { color: var(--dark-blue); margin-bottom: 15px; border-bottom: 3px solid var(--primary-red); display: inline-block; padding-bottom: 5px; }
         
         input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; margin-bottom: 10px; }
+        input:disabled { background: #e0e0e0; border-color: #ccc; color: #555; }
+        
         button { background-color: var(--primary-red); color: var(--white); border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 1rem; font-weight: bold; transition: 0.2s; }
         button:active { transform: scale(0.98); }
         button.secondary { background-color: var(--dark-blue); }
         button.outline { background: none; border: 1px solid var(--dark-blue); color: var(--dark-blue); }
         button.success { background-color: var(--success-green); }
+        
+        /* כפתור כבוי בעת דגימת מיקום או התחברות */
+        button:disabled { background-color: #b0bec5 !important; color: #ffffff !important; cursor: not-allowed; border-color: #b0bec5; transform: none; box-shadow: none; }
 
         .list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
         .status-tag { padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; color: white; font-weight: bold; }
@@ -87,14 +92,14 @@
             <form id="form-login">
                 <input type="email" id="login-email" placeholder="אימייל" required>
                 <input type="password" id="login-pass" placeholder="סיסמה" required>
-                <button type="submit">התחבר</button>
+                <button type="submit" id="btn-login-submit">התחבר</button>
             </form>
         </section>
 
         <section id="view-admin" class="hidden">
             <div class="card">
                 <h2>ניהול מערכת</h2>
-                <p>שלום מנהל, כאן תוכל לנהל את כל המשתמשים והקבוצות במערכת.</p>
+                <p>שלום מנהל, פאנל הניהול בהקמה.</p>
             </div>
         </section>
 
@@ -140,7 +145,7 @@
                     </div>
 
                     <div id="tab-students" class="hidden">
-                        <button class="outline" onclick="window.showAddStudentModal()">👤 הוסף תלמיד לקורס</button>
+                        <button class="outline" onclick="window.showAddStudentModal()">👤 הוסף תלמיד לקורס (לפי מזהה)</button>
                         <div id="instructor-students-list" style="margin-top: 15px;"></div>
                     </div>
                 </div>
@@ -162,7 +167,7 @@
     <div id="create-group-modal" class="modal-overlay hidden">
         <div class="card" style="width: 100%; max-width: 400px;">
             <h3>יצירת קבוצה חדשה</h3>
-            <input type="text" id="new-group-name" placeholder="שם הקבוצה (למשל: חובשים מחזור א')">
+            <input type="text" id="new-group-name" placeholder="שם הקבוצה (למשל: מחזור א')">
             <button onclick="window.handleCreateGroup()">צור קבוצה</button>
             <button class="outline" style="margin-top:10px" onclick="window.closeModals()">ביטול</button>
         </div>
@@ -175,7 +180,7 @@
             <input type="number" id="ns-num" placeholder="למשל: 1">
             <label>שעת התחלה (לחישוב איחור):</label>
             <input type="time" id="ns-start">
-            <button onclick="window.submitNewSession()">הפעל מפגש ודגום מיקום 📍</button>
+            <button id="btn-create-session" onclick="window.submitNewSession(event)">הפעל מפגש ודגום מיקום 📍</button>
             <button class="outline" style="margin-top:10px" onclick="window.closeModals()">ביטול</button>
         </div>
     </div>
@@ -183,8 +188,8 @@
     <div id="add-student-modal" class="modal-overlay hidden">
         <div class="card" style="width: 100%; max-width: 400px;">
             <h3>הוספת תלמיד לקורס</h3>
-            <p style="font-size: 0.9rem; margin-bottom: 10px;">הזן את המזהה הייחודי של התלמיד (ID):</p>
-            <input type="text" id="student-uid-input" placeholder="מזהה תלמיד">
+            <p style="font-size: 0.9rem; margin-bottom: 10px;">הזן את המזהה הייחודי של התלמיד:</p>
+            <input type="text" id="student-uid-input" placeholder="מזהה תלמיד (UID)">
             <button onclick="window.handleAddStudent()">הוסף לקבוצה</button>
             <button class="outline" style="margin-top:10px" onclick="window.closeModals()">ביטול</button>
         </div>
@@ -198,11 +203,20 @@
             <button onclick="window.closeModals()">סגור</button>
         </div>
     </div>
+    
+    <div id="password-modal" class="modal-overlay hidden">
+        <div class="card" style="width: 100%; max-width: 400px;">
+            <h3>שינוי סיסמה</h3>
+            <input type="password" id="new-pw" placeholder="סיסמה חדשה (6+ תווים)">
+            <button onclick="window.updatePassword()">עדכן סיסמה</button>
+            <button class="outline" style="margin-top: 10px;" onclick="window.closeModals()">ביטול</button>
+        </div>
+    </div>
 
     <div id="edit-student-modal" class="modal-overlay hidden">
         <div class="card" style="width: 100%; max-width: 350px;">
             <h3 id="es-name">עריכת חניך</h3>
-            <p id="es-info" style="margin-bottom: 15px;"></p>
+            <p id="es-info" style="margin-bottom: 15px; font-weight: bold;"></p>
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button class="bg-green" onclick="window.updateStatus('on_time')">נוכח ✅</button>
                 <button class="bg-yellow" onclick="window.updateStatus('late')">איחור ⏰</button>
@@ -218,6 +232,7 @@
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, collection, addDoc, query, where, getDocs, updateDoc, deleteField, orderBy, serverTimestamp, onSnapshot, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+        // למרות ששם הפרויקט מכיל mda, זוהי כתובת המסד שלך בשרת ואי אפשר לשנות אותה מבלי לשבור את החיבור
         const firebaseConfig = {
             apiKey: "AIzaSyA7JlU7Qc6uuSP43khqCBC96KFQpk5dgOE", authDomain: "attendancemda.firebaseapp.com",
             projectId: "attendancemda", storageBucket: "attendancemda.firebasestorage.app",
@@ -243,7 +258,11 @@
 
         window.toggleDropdown = (e) => { e.stopPropagation(); document.getElementById('profile-dropdown').classList.toggle('show'); };
         window.onclick = () => document.getElementById('profile-dropdown').classList.remove('show');
-        window.closeModals = () => document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+        window.closeModals = () => {
+            document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+            const btn = document.getElementById('btn-create-session');
+            if(btn) { btn.disabled = false; btn.innerText = "הפעל מפגש ודגום מיקום 📍"; }
+        };
 
         // --- אימות כניסה ---
         onAuthStateChanged(auth, async (user) => {
@@ -253,13 +272,21 @@
                     userData = uDoc.data();
                     document.getElementById('user-display-name').innerText = userData.fullName;
                     document.getElementById('app-header').classList.remove('hidden');
-                    if (userData.role === 'admin') window.showView('view-admin');
-                    else if (userData.role === 'instructor') { window.showView('view-instructor'); window.loadInstructorMain(); }
-                    else { window.showView('view-student'); window.loadStudentMain(); }
+                    
+                    // בדיקת הרשאות הניהול (Role או אימייל מוגדר מראש)
+                    if (userData.role === 'admin' || user.email.toLowerCase() === 'anfinityroot@gmail.com') {
+                        window.showView('view-admin');
+                    } else if (userData.role === 'instructor') { 
+                        window.showView('view-instructor'); window.loadInstructorMain(); 
+                    } else { 
+                        window.showView('view-student'); window.loadStudentMain(); 
+                    }
                 }
             } else {
                 document.getElementById('app-header').classList.add('hidden');
                 window.showView('view-auth');
+                const btn = document.getElementById('btn-login-submit');
+                if(btn) { btn.disabled = false; btn.innerText = "התחבר"; }
             }
         });
 
@@ -271,7 +298,7 @@
             cont.innerHTML = snaps.empty ? "אין קבוצות בניהולך" : "";
             snaps.forEach(d => {
                 const div = document.createElement('div'); div.className = "card clickable";
-                div.innerHTML = `<strong>${d.data().name}</strong><br><small>קוד: ${d.id}</small>`;
+                div.innerHTML = `<strong>${d.data().name}</strong>`;
                 div.onclick = () => window.openGroup(d.id, d.data().name);
                 cont.appendChild(div);
             });
@@ -309,13 +336,31 @@
             list.innerHTML = "טוען מפגשים...";
             const snaps = await getDocs(query(collection(db, "groups", curGroupId, "sessions"), orderBy("sessionNumber", "desc")));
             list.innerHTML = snaps.empty ? "לא נמצאו מפגשים" : "";
+            
             snaps.forEach(sd => {
                 const s = sd.data();
+                let reopenBtn = "";
+                
+                // בדיקת 48 שעות לפתיחה מחדש
+                if (s.status === 'closed' && s.createdAt) {
+                    const createdTime = s.createdAt.toDate().getTime();
+                    const now = new Date().getTime();
+                    const hoursDiff = (now - createdTime) / (1000 * 60 * 60);
+                    if (hoursDiff < 48) {
+                        reopenBtn = `<button class="outline" style="padding: 2px 8px; font-size: 0.8rem; width: auto; margin-right: 10px;" onclick="event.stopPropagation(); window.reopenSession('${sd.id}')">🔄 פתח מחדש</button>`;
+                    }
+                }
+
                 const div = document.createElement('div'); div.className = "list-item clickable";
-                div.innerHTML = `<span>מפגש ${s.sessionNumber}</span> <span class="status-tag ${s.status==='open'?'bg-green':'bg-red'}">${s.status==='open'?'פתוח':'סגור'}</span>`;
+                div.innerHTML = `<div style="display:flex; align-items:center;"><span>מפגש ${s.sessionNumber}</span> ${reopenBtn}</div> <span class="status-tag ${s.status==='open'?'bg-green':'bg-red'}">${s.status==='open'?'פתוח':'סגור'}</span>`;
                 div.onclick = () => window.openReportLive(sd.id, s.sessionNumber, s.status);
                 list.appendChild(div);
             });
+        };
+
+        window.reopenSession = async (sid) => {
+            await updateDoc(doc(db, "groups", curGroupId, "sessions", sid), { status: 'open' });
+            window.loadSessions();
         };
 
         window.loadGroupStudents = async () => {
@@ -329,7 +374,9 @@
                 const u = await getDoc(doc(db, "users", uid));
                 if(u.exists()) {
                     membersCache.push({uid, name: u.data().fullName});
-                    list.innerHTML += `<div class="list-item"><span>${u.data().fullName}</span><small>${uid}</small></div>`;
+                    // מציג תעודת זהות במקום UID
+                    const tz = u.data().idNumber || 'ללא ת"ז';
+                    list.innerHTML += `<div class="list-item"><span>${u.data().fullName}</span><small>ת"ז: ${tz}</small></div>`;
                 }
             }
         };
@@ -344,10 +391,16 @@
         };
 
         window.showNewSessionForm = () => document.getElementById('new-session-modal').classList.remove('hidden');
-        window.submitNewSession = async () => {
+        
+        window.submitNewSession = async (e) => {
             const num = document.getElementById('ns-num').value;
             const start = document.getElementById('ns-start').value;
             if(!num || !start) return alert("מלא את כל הפרטים");
+            
+            const btn = e.target;
+            btn.disabled = true;
+            btn.innerText = "דוגם מיקום ופותח...";
+
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 await addDoc(collection(db, "groups", curGroupId, "sessions"), {
                     sessionNumber: Number(num), expectedStartTime: start, status: 'open',
@@ -356,7 +409,11 @@
                 });
                 window.closeModals();
                 window.loadSessions();
-            }, () => alert("חובה לאשר GPS"), {enableHighAccuracy: true});
+            }, () => {
+                btn.disabled = false;
+                btn.innerText = "הפעל מפגש ודגום מיקום 📍";
+                alert("שגיאה! יש לאשר הרשאת מיקום (GPS) בדפדפן כדי לפתוח מפגש.");
+            }, {enableHighAccuracy: true});
         };
 
         window.openReportLive = (sid, snum, status) => {
@@ -379,18 +436,21 @@
                 const excB = sdata.exceptions?.[b.uid] && !sdata.exceptions?.[b.uid].snoozed ? 1 : 0;
                 return excB - excA;
             });
+            
             sorted.forEach(student => {
                 const att = sdata.attendance?.[student.uid];
                 const exc = sdata.exceptions?.[student.uid];
                 let txt = "חסר", cls = "bg-absent", info = "";
+                
                 if(exc?.status === 'pending') {
                     if(exc.snoozed) { txt = "ממתין לטיפול"; cls = "bg-snoozed"; }
                     else { txt = `חריג (${exc.distance}מ')`; cls = "bg-blink-orange"; }
-                    info = `מרחק: ${exc.distance} מטרים.`;
+                    info = `מרחק נמדד: ${exc.distance} מטרים.`;
                 } else if(att) {
                     txt = att.status === 'late' ? "איחור" : "נוכח";
                     cls = att.status === 'late' ? "bg-yellow" : "bg-green";
                 }
+
                 const div = document.createElement('div'); div.className = `list-item clickable ${cls}`;
                 div.innerHTML = `<span>${student.name}</span><strong>${txt}</strong>`;
                 div.onclick = () => {
@@ -431,8 +491,10 @@
             const alerts = document.getElementById('student-active-alerts');
             const cont = document.getElementById('student-groups-container');
             alerts.innerHTML = ""; cont.innerHTML = "טוען...";
+            
             const snaps = await getDocs(query(collection(db, "groups"), where("members", "array-contains", auth.currentUser.uid)));
             cont.innerHTML = snaps.empty ? "אינך רשום לקורסים" : "";
+            
             for(const gd of snaps.docs) {
                 const sSnaps = await getDocs(query(collection(db, "groups", gd.id, "sessions"), where("status", "==", "open")));
                 sSnaps.forEach(sd => {
@@ -447,7 +509,10 @@
         };
 
         window.markAttend = async (gid, sid, iLat, iLng, start, e) => {
-            const btn = e.target; btn.disabled = true;
+            const btn = e.target; 
+            btn.disabled = true;
+            btn.innerText = "בודק מיקום...";
+
             navigator.geolocation.getCurrentPosition(async (pos) => {
                 const R = 6371e3; const dLat = (pos.coords.latitude - iLat) * Math.PI / 180; const dLon = (pos.coords.longitude - iLng) * Math.PI / 180;
                 const a = Math.sin(dLat/2)**2 + Math.cos(iLat*Math.PI/180)*Math.cos(pos.coords.latitude*Math.PI/180)*Math.sin(dLon/2)**2;
@@ -460,9 +525,13 @@
                 const ref = doc(db, "groups", gid, "sessions", sid);
                 if(dist <= 100) await updateDoc(ref, { [`attendance.${auth.currentUser.uid}`]: { status: stat, timestamp: serverTimestamp() }, [`exceptions.${auth.currentUser.uid}`]: deleteField() });
                 else await updateDoc(ref, { [`exceptions.${auth.currentUser.uid}`]: { status: 'pending', distance: dist, timestamp: serverTimestamp() } });
-                alert(dist <= 100 ? "נוכחות נקלטה" : "חריג מיקום נשלח למדריך");
+                alert(dist <= 100 ? "נוכחות נקלטה בהצלחה" : "חריג מיקום נשלח למדריך לאישור");
                 window.loadStudentMain();
-            }, () => { btn.disabled = false; alert("שגיאת מיקום"); }, {enableHighAccuracy: true});
+            }, () => { 
+                btn.disabled = false; 
+                btn.innerText = "דווח נוכחות 📍";
+                alert("שגיאת מיקום. יש לאשר GPS בדפדפן."); 
+            }, {enableHighAccuracy: true});
         };
 
         window.openHistory = async (gid, name) => {
@@ -481,19 +550,37 @@
             });
         };
 
-        // --- פרופיל ---
+        // --- פרופיל וסיסמה ---
         window.showProfileModal = () => {
             document.getElementById('prof-name').value = userData.fullName;
             document.getElementById('prof-tz').value = userData.idNumber || 'לא צוין';
             document.getElementById('profile-modal').classList.remove('hidden');
         };
 
+        window.showPasswordModal = () => document.getElementById('password-modal').classList.remove('hidden');
+
+        window.updatePassword = async () => {
+            const pw = document.getElementById('new-pw').value; if(pw.length < 6) return alert("סיסמה קצרה מדי (מינימום 6 תווים)");
+            try { await updatePassword(auth.currentUser, pw); alert("עודכן בהצלחה!"); window.closeModals(); } catch(e) { alert("נדרשת התחברות מחדש למערכת לצורך פעולה זו."); }
+        };
+
         window.handleLogout = () => signOut(auth);
         
+        // --- התחברות ---
         document.getElementById('form-login').onsubmit = async (e) => {
             e.preventDefault();
-            try { await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value); }
-            catch { alert("טעות בפרטים"); }
+            const btn = document.getElementById('btn-login-submit');
+            btn.disabled = true;
+            btn.innerText = "מתחבר...";
+            
+            try { 
+                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pass').value); 
+                // מסך ההתחברות ייעלם אוטומטית על ידי onAuthStateChanged
+            } catch (error) { 
+                alert("שגיאה בפרטי ההתחברות. אנא נסה שנית."); 
+                btn.disabled = false;
+                btn.innerText = "התחבר";
+            }
         };
     </script>
 </body>
