@@ -625,16 +625,22 @@ onAuthStateChanged(auth, async (user) => {
 
         // --- Auth Logic ---
         document.getElementById('form-login').onsubmit = async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('btn-login-submit'); btn.disabled = true; btn.innerText = "מתחבר...";
-            let loginInput = document.getElementById('login-email').value.trim();
-            if(!loginInput.includes('@')) { loginInput = loginInput + '@mada.system.local'; }
-            try { 
-                await signInWithEmailAndPassword(auth, loginInput, document.getElementById('login-pass').value); 
-            } catch { 
-                alert("פרטים שגויים. נסה שוב."); btn.disabled = false; btn.innerText = "היכנס למערכת"; 
-            }
-        };
+    e.preventDefault();
+    const btn = document.getElementById('btn-login-submit'); 
+    btn.disabled = true; 
+    btn.innerText = "מתחבר...";
+    
+    let loginInput = document.getElementById('login-email').value.trim();
+    if(!loginInput.includes('@')) { loginInput = loginInput + '@mada.system.local'; }
+    
+    try { 
+        await signInWithEmailAndPassword(auth, loginInput, document.getElementById('login-pass').value); 
+    } catch (error) { 
+        alert("פרטים שגויים. נסה שוב."); 
+        btn.disabled = false; 
+        btn.innerText = "היכנס למערכת"; 
+    }
+};
 
         document.getElementById('form-register').onsubmit = async (e) => {
             e.preventDefault();
