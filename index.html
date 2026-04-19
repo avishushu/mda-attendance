@@ -425,6 +425,14 @@
         const db = getFirestore(app);
 
         let userData = null, curGroupId = null, curSessionId = null, curEditUid = null;
+                // פונקציה להסרת מסך הטעינה
+        const hideSplashScreen = () => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.classList.add('hidden'), 500);
+            }
+        };
         let liveUnsubscribe = null, membersCache = [], sessionSort = 'desc', allSessionsCache = [];
         let liveSessionData = null, liveSessionNumber = null;
         let adminUsersCache = [], bypassInterval = null;
