@@ -117,6 +117,15 @@
 </head>
 <body>
 
+    <div id="splash-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--white); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 99999; transition: opacity 0.5s;">
+        <h1 style="color: var(--primary-red); font-size: 2.5rem; margin-bottom: 10px;">Mdattend</h1>
+        <p style="color: var(--dark-blue); font-weight: 500;">מערכת ניהול נוכחות...</p>
+    </div>
+
+    <button id="fab-install" class="hidden" style="position: fixed; bottom: 20px; right: 20px; z-index: 10000; background: var(--primary-red); color: white; border: none; padding: 12px 20px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+        📱 התקן אפליקציה
+    </button>
+
     <header id="app-header" class="hidden">
         <div class="profile-area" onclick="window.toggleDropdown(event)">
             <span>👤</span> <span id="user-display-name">טוען...</span>
@@ -386,6 +395,19 @@
     </div>
 
     <div id="toast-container"></div>
+
+        <div id="ios-install-modal" class="modal-overlay hidden">
+        <div class="card" style="width: 100%; max-width: 350px; text-align: center; margin: 0;">
+            <h3>התקנת האפליקציה ב-iOS</h3>
+            <p style="margin: 15px 0;">כדי להתקין את המערכת על האייפון שלך:</p>
+            <ol style="text-align: right; margin-bottom: 20px; padding-right: 20px;">
+                <li>לחץ על כפתור השיתוף (Share) בתחתית המסך.</li>
+                <li>גלול למטה ולחץ על <strong>"הוסף למסך הבית" (Add to Home Screen)</strong>.</li>
+            </ol>
+            <button onclick="document.getElementById('ios-install-modal').classList.add('hidden')">הבנתי</button>
+        </div>
+    </div>
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
