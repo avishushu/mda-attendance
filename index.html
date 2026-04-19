@@ -1329,6 +1329,28 @@
         window.backToGroupDetails = () => { document.getElementById('session-report-view').classList.add('hidden'); document.getElementById('instructor-group-details').classList.remove('hidden'); };
         window.handleLogout = () => signOut(auth);
 
+                // לוגיקת התקנה
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('fab-install').classList.remove('hidden');
+        });
+
+        document.getElementById('fab-install').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') document.getElementById('fab-install').classList.add('hidden');
+                deferredPrompt = null;
+            } else {
+                // אם זה אייפון, נציג את המודל שהוספת
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                if (isIOS) document.getElementById('ios-install-modal').classList.remove('hidden');
+            }
+        });
+            
+
     </script>
 </body>
 </html>
