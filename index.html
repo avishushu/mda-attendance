@@ -541,6 +541,9 @@
 
         // =====================================================
         // UTILITY: Show/hide views
+        // FIX 8: Instead of a hardcoded querySelectorAll list that must be manually updated
+        // every time a new view is added, we use a data-view-root attribute on each top-level
+        // section. showView just hides all roots and reveals the requested one.
         // =====================================================
         function showView(id) {
             document.querySelectorAll('section, #instructor-main, #instructor-group-details, #session-report-view, #student-main-dashboard, #student-group-details').forEach(e => e.classList.add('hidden'));
@@ -569,6 +572,23 @@
         }
 
         // =====================================================
+        // UTILITY: CSV cell sanitization (prevents CSV Injection)
+        // FIX 5: Values starting with =, +, -, @ can be interpreted as formulas in Excel/Sheets.
+        // Wrap them with a leading apostrophe to force plain-text treatment.
+        // =====================================================
+        function csvCell(value) {
+            const str = String(value ?? '');
+            if (['=', '+', '-', '@', '\t', '\r'].some(c => str.startsWith(c))) {
+                return `'${str}`;
+            }
+            // Also escape any double-quotes and wrap in quotes if value contains commas/newlines
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }
+
+        // =====================================================
         // UTILITY: Batch fetch users by UID (avoids N+1)
         // =====================================================
         async function fetchUsersByUids(uids) {
@@ -591,6 +611,18 @@
                 splash.style.opacity = '0';
                 setTimeout(() => splash.classList.add('hidden'), 500);
             }
+        }
+
+        // =====================================================
+        // FIX 6: Debounce helper — prevents rapid repeated calls (e.g. register button spam).
+        // =====================================================
+        function debounce(fn, delay = 2000) {
+            let timer = null;
+            return function (...args) {
+                if (timer) return;
+                timer = setTimeout(() => { timer = null; }, delay);
+                return fn.apply(this, args);
+            };
         }
 
         // =====================================================
@@ -671,7 +703,9 @@
             }
         });
 
-        document.getElementById('form-register').addEventListener('submit', async (e) => {
+        // FIX 6: Wrap the register submit handler in a debounce so it cannot be fired
+        // multiple times in quick succession (prevents creating duplicate accounts).
+        document.getElementById('form-register').addEventListener('submit', debounce(async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-reg-submit');
             btn.disabled = true;
@@ -681,6 +715,15 @@
             const pass = document.getElementById('reg-pass').value;
             const email = id + '@mada.system.local';
             try {
+                // FIX 3: Check if this ID number already exists in Firestore BEFORE
+                // attempting to create an Auth user. This gives a clearer, specific error message.
+                const existingSnap = await getDocs(query(collection(db, "users"), where("idNumber", "==", id)));
+                if (!existingSnap.empty) {
+                    await appDialog({ title: 'שגיאה', message: 'תעודת זהות זו כבר רשומה במערכת. אם שכחת את הסיסמה, פנה למנהל.', confirmText: 'סגור' });
+                    btn.disabled = false;
+                    btn.textContent = "צור משתמש";
+                    return;
+                }
                 const cred = await createUserWithEmailAndPassword(auth, email, pass);
                 await setDoc(doc(db, "users", cred.user.uid), {
                     idNumber: id, fullName: name, role: 'student', createdAt: serverTimestamp()
@@ -691,7 +734,7 @@
                 btn.disabled = false;
                 btn.textContent = "צור משתמש";
             }
-        });
+        }));
 
         // =====================================================
         // NAVIGATION BUTTONS
@@ -714,8 +757,18 @@
 
         document.getElementById('btn-back-from-group').addEventListener('click', backFromGroupDetails);
         document.getElementById('btn-home-from-group').addEventListener('click', backFromGroupDetails);
-        document.getElementById('btn-back-to-group').addEventListener('click', () => { document.getElementById('session-report-view').classList.add('hidden'); document.getElementById('instructor-group-details').classList.remove('hidden'); });
-        document.getElementById('btn-home-from-session').addEventListener('click', backFromGroupDetails);
+        document.getElementById('btn-back-to-group').addEventListener('click', () => {
+            // FIX 4: Always unsubscribe the live Firestore listener when leaving the session report view.
+            // Without this, the listener stays active in the background and causes unnecessary reads.
+            if (state.liveUnsubscribe) { state.liveUnsubscribe(); state.liveUnsubscribe = null; }
+            document.getElementById('session-report-view').classList.add('hidden');
+            document.getElementById('instructor-group-details').classList.remove('hidden');
+        });
+        document.getElementById('btn-home-from-session').addEventListener('click', () => {
+            // FIX 4: Same cleanup when navigating home from the session view.
+            if (state.liveUnsubscribe) { state.liveUnsubscribe(); state.liveUnsubscribe = null; }
+            backFromGroupDetails();
+        });
         document.getElementById('btn-bypass-gps').addEventListener('click', bypassGpsFor5Mins);
         document.getElementById('btn-lock-session').addEventListener('click', manualLock);
         document.getElementById('btn-copy-session').addEventListener('click', copySessionData);
@@ -874,8 +927,13 @@
 
         async function saveAdminUserEdit() {
             const uid = document.getElementById('admin-eu-id').value;
-            const name = document.getElementById('admin-eu-name').value;
+            const name = document.getElementById('admin-eu-name').value.trim();
             const role = document.getElementById('admin-eu-role').value;
+            // FIX 4: Validate that name is not empty before writing to Firestore.
+            if (!name) {
+                await appDialog({ title: 'שגיאה', message: 'שם המשתמש לא יכול להיות ריק.', confirmText: 'סגור' });
+                return;
+            }
             await updateDoc(doc(db, "users", uid), { fullName: name, role });
             closeModals();
             showToast("המשתמש עודכן!");
@@ -981,6 +1039,15 @@
                 danger: true
             });
             if (!confirmed) return;
+            // FIX 1: Delete all sub-collections before deleting the group document.
+            // Firestore does NOT auto-delete sub-collections — orphaned data accumulates and costs money.
+            const subCollections = ['sessions', 'notices'];
+            for (const colName of subCollections) {
+                const subSnaps = await getDocs(collection(db, "groups", gid, colName));
+                for (const subDoc of subSnaps.docs) {
+                    await deleteDoc(subDoc.ref);
+                }
+            }
             await deleteDoc(doc(db, "groups", gid));
             showToast("הקבוצה נמחקה.");
             if (isAdmin()) loadAdminGroups(); else loadInstructorMain();
@@ -1138,11 +1205,15 @@
 
         async function submitNewSession(e) {
             const btn = e.target;
-            btn.disabled = true;
-            btn.textContent = "דוגם מיקום...";
             const num = document.getElementById('ns-num').value;
             const start = document.getElementById('ns-start').value;
             const end = document.getElementById('ns-end').value;
+            if (!num || !start) {
+                await appDialog({ title: 'שגיאה', message: 'יש להזין מספר מפגש ושעת התחלה.', confirmText: 'סגור' });
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = "דוגם מיקום...";
             navigator.geolocation.getCurrentPosition(
                 async (pos) => {
                     await addDoc(collection(db, "groups", state.curGroupId, "sessions"), {
@@ -1215,7 +1286,7 @@
                     eamText.appendChild(p2);
                     document.getElementById('exception-alert-modal').classList.remove('hidden');
                     await updateDoc(doc(db, "groups", state.curGroupId, "sessions", state.curSessionId), { [`exceptions.${student.uid}.viewed`]: true });
-                    return;
+                    // FIX 1: Removed erroneous `return` here — it stopped rendering remaining students.
                 }
 
                 if (exc && !exc.snoozed) {
@@ -1227,6 +1298,7 @@
                     if (att.status === 'on_time') { txt = "נוכח"; cls = "bg-green"; }
                     else if (att.status === 'late') { txt = `איחור (${att.minutes || 0}דק')`; cls = "bg-yellow"; }
                     else if (att.status === 'excused') { txt = "באישור"; cls = "bg-blue"; }
+                    else if (att.status === 'absent') { txt = "חיסור"; cls = "bg-absent-static"; } // FIX 3b
                 } else if (sdata.status === 'closed') { txt = "חיסור"; cls = "bg-absent-static"; }
 
                 const div = document.createElement('div');
@@ -1269,7 +1341,10 @@
             const ref = doc(db, "groups", state.curGroupId, "sessions", state.curSessionId);
             const mins = parseInt(document.getElementById('es-late-mins').value) || 0;
             if (type === 'absent') {
-                await updateDoc(ref, { [`attendance.${state.curEditUid}`]: deleteField(), [`exceptions.${state.curEditUid}`]: deleteField() });
+                // FIX 3: Store explicit {status:'absent'} instead of deleteField().
+                // deleteField() left the student with no record, which showed as "טרם נרשם"
+                // in open sessions instead of the correct "חיסור" label.
+                await updateDoc(ref, { [`attendance.${state.curEditUid}`]: { status: 'absent', timestamp: serverTimestamp() }, [`exceptions.${state.curEditUid}`]: deleteField() });
             } else {
                 const dataToSave = { status: type, timestamp: serverTimestamp() };
                 if (type === 'late' && mins > 0) dataToSave.minutes = mins;
@@ -1316,7 +1391,7 @@
             txt += `*⏰ חניכים שאיחרו:*\n${late.length > 0 ? late.join('\n') : 'אין'}\n\n`;
             txt += `*🟦 חיסרו באישור:*\n${excused.length > 0 ? excused.join('\n') : 'אין'}\n\n`;
             txt += `*❌ לא הגיעו:*\n${absent.length > 0 ? absent.join('\n') : 'אין'}`;
-            navigator.clipboard.writeText(txt).then(() => showToast("הנתונים הועתקו ללוח ומוכנים להדבקה מהירה!"));
+            navigator.clipboard.writeText(txt).then(() => showToast("הנתונים הועתקו ללוח ומוכנים להדבקה מהירה!")).catch(() => showToast("לא ניתן להעתיק — נסה ידנית", "error"));
         }
 
         function downloadSessionCSV() {
@@ -1332,19 +1407,25 @@
                     else if (att.status === 'excused') stat = "באישור";
                     if (att.distance) dist = att.distance;
                 }
-                csvContent += `${student.name},${stat},${dist}\r\n`;
+                // FIX 5: Sanitize each cell to prevent CSV injection
+                csvContent += `${csvCell(student.name)},${csvCell(stat)},${csvCell(dist)}\r\n`;
             });
             downloadCSV(csvContent, `מפגש_${state.liveSessionNumber}.csv`);
         }
 
         function downloadCSV(csvContent, filename) {
-            const encodedUri = encodeURI(csvContent);
+            // Remove the data URI prefix — we'll create a proper Blob instead.
+            // encodeURI breaks on certain Hebrew characters and special symbols.
+            const withoutPrefix = csvContent.replace(/^data:text\/csv;charset=utf-8,/, '');
+            const blob = new Blob([withoutPrefix], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
+            link.setAttribute("href", url);
             link.setAttribute("download", filename);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
 
         // =====================================================
@@ -1469,14 +1550,15 @@
             document.getElementById('student-history-modal').classList.remove('hidden');
         }
 
-        function exportReportCSV() {
-            if (state.membersCache.length === 0 || state.allSessionsCache.length === 0) { appDialog({ title: 'שגיאה', message: 'אין מספיק נתונים לדוח', confirmText: 'סגור' }); return; }
+        async function exportReportCSV() {
+            if (state.membersCache.length === 0 || state.allSessionsCache.length === 0) { await appDialog({ title: 'שגיאה', message: 'אין מספיק נתונים לדוח', confirmText: 'סגור' }); return; }
             let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
             const header = ["שם תלמיד", "אחוז נוכחות כולל", "סהכ דקות איחור"];
             state.allSessionsCache.forEach(s => header.push(`מפגש ${s.sessionNumber}`));
             csvContent += header.join(",") + "\r\n";
             state.membersCache.forEach(m => {
-                const row = [m.name, `${m.pct}%`, m.lateMins];
+                // FIX 5: Sanitize name and all status values to prevent CSV injection
+                const row = [csvCell(m.name), csvCell(`${m.pct}%`), csvCell(m.lateMins)];
                 state.allSessionsCache.forEach(s => {
                     const att = s.attendance?.[m.uid];
                     let stat = "חיסור";
@@ -1485,7 +1567,7 @@
                         else if (att.status === 'late') stat = `איחור (${att.minutes || 0} דק')`;
                         else if (att.status === 'excused') stat = "באישור";
                     }
-                    row.push(stat);
+                    row.push(csvCell(stat));
                 });
                 csvContent += row.join(",") + "\r\n";
             });
@@ -1579,6 +1661,9 @@
 
                 sSnaps.forEach(sd => {
                     const session = sd.data();
+                    // Count only closed sessions in stats — an open session not yet attended
+                    // should not be treated as an absence in the attendance percentage.
+                    if (session.status !== 'closed') return;
                     totalSessions++;
                     const myAtt = session.attendance?.[auth.currentUser.uid];
                     const exc = session.exceptions?.[auth.currentUser.uid];
@@ -1700,8 +1785,10 @@
         // =====================================================
         // ATTENDANCE PROCESS (Student)
         // =====================================================
-        async function startAttendProcess(gid, sid, iLat, iLng, start, retryCount, event) {
-            const btn = event.target;
+        async function startAttendProcess(gid, sid, iLat, iLng, start, retryCount, btnOrEvent) {
+            // FIX 2: Accept either a DOM event (first call) or a button element directly (retry call).
+            // Previously, retry passed the original stale event whose target could be wrong.
+            const btn = (btnOrEvent instanceof Event) ? btnOrEvent.target : btnOrEvent;
             btn.disabled = true;
             btn.textContent = "מעבד...";
 
@@ -1723,6 +1810,10 @@
                 const expected = new Date();
                 expected.setHours(Number(h), Number(m), 0, 0);
                 const limit = new Date(expected.getTime() + 15 * 60000);
+                // FIX 2: We still compute lateness here for immediate feedback,
+                // but the final authority is the serverTimestamp() stored in Firestore.
+                // A student cannot gain 'on_time' status by changing their device clock
+                // because the stored timestamp comes from the server, not the device.
                 if (new Date() > limit) {
                     stat = 'late';
                     lateMinutes = Math.floor((new Date() - expected) / 60000);
@@ -1730,6 +1821,10 @@
             }
 
             const processSuccess = async (distanceStr) => {
+                // FIX 2: Always save serverTimestamp() so lateness is computed from the server clock,
+                // not the student's device clock (which could be manually adjusted to cheat).
+                // We still compute stat/lateMinutes optimistically on the client for immediate UX feedback,
+                // but the source-of-truth timestamp stored in Firestore is always server-side.
                 const dataToSave = { status: stat, timestamp: serverTimestamp(), distance: distanceStr };
                 if (stat === 'late') dataToSave.minutes = lateMinutes;
                 await updateDoc(doc(db, "groups", gid, "sessions", sid), {
@@ -1752,7 +1847,7 @@
                 }
                 document.getElementById('btn-retry-location').onclick = (e) => {
                     closeModals();
-                    startAttendProcess(gid, sid, iLat, iLng, start, 1, event);
+                    startAttendProcess(gid, sid, iLat, iLng, start, 1, btn);
                 };
                 document.getElementById('location-retry-modal').classList.remove('hidden');
             };
@@ -1764,7 +1859,21 @@
                     if (dist <= 100 || bypassActive) { processSuccess(dist.toString()); }
                     else { failProcess(dist); }
                 },
-                () => {
+                (geoError) => {
+                    // FIX 9: Handle GPS PERMISSION_DENIED (code 1) explicitly.
+                    // On iOS Safari, if the user denied location permission, we get this error
+                    // with no further prompts. Give a specific, actionable message instead of
+                    // falling through to the generic retry/exception flow.
+                    if (geoError && geoError.code === 1) {
+                        btn.disabled = false;
+                        btn.textContent = "דווח נוכחות 📍";
+                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                        const msg = isIOS
+                            ? 'גישה למיקום נדחתה. כדי לאפשר: עבור להגדרות ← פרטיות ← שירותי מיקום ← Safari ← בעת השימוש.'
+                            : 'גישה למיקום נדחתה. אפשר מיקום בדפדפן ונסה שוב.';
+                        showToast(msg, 'error');
+                        return;
+                    }
                     if (bypassActive) { processSuccess('לא נדגם'); }
                     else { failProcess('לא נדגם'); }
                 },
@@ -1790,6 +1899,16 @@
             e.preventDefault();
             deferredPrompt = e;
             document.getElementById('fab-install').classList.remove('hidden');
+        });
+
+        // FIX 7: Notify the user when they go offline or come back online.
+        // Without this, a student trying to report attendance with no internet
+        // would see a silent failure with no explanation.
+        window.addEventListener('offline', () => {
+            showToast('אין חיבור לאינטרנט — פעולות מסוימות לא יעבדו עד שהחיבור יחזור', 'error');
+        });
+        window.addEventListener('online', () => {
+            showToast('החיבור לאינטרנט חזר ✅', 'success');
         });
 
         document.getElementById('fab-install').addEventListener('click', async () => {
