@@ -1,16 +1,16 @@
 {
-  "short_name": "נוכחות",
-  "name": "מערכת ניהול נוכחות",
+  "short_name": "Im Here",
+  "name": "מערכת נוכחות חכמה",
   "description": "אפליקציה לניהול ודיווח נוכחות מבוססת מיקום",
   "icons": [
     {
-      "src": "micon2.png",
+      "src": "Micon.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
-      "src": "Micom.png",
+      "src": "micon2.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
