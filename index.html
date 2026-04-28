@@ -1640,6 +1640,8 @@
     </div>
 
     <!-- APP INFO MODAL (center dialog, mandatory on first load) -->
+
+
 <div id="app-info-modal" class="modal-center hidden">
     <div class="card" style="width:100%; max-width:440px; margin:0; padding:0 !important; border-radius:var(--r-xl) !important; overflow:hidden; display:flex; flex-direction:column; max-height:90vh;">
 
@@ -1657,15 +1659,15 @@
                     <span style="font-size:1.4rem; flex-shrink:0;"><span class="icon icon-lg" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span></span>
                     <div>
                         <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">מאובטח לחלוטין</p>
-                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">האפליקציה לא ניגשת לאנשי הקשר שלך, לתמונות או למיקרופון. המידע היחיד שנאסף הוא מיקום GPS בזמן הדיווח בלבד.</p>
+                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">האפליקציה לא ניגשת לאנשי הקשר שלך, לתמונות, למיקרופון, לפניות אישיות או לכל מידע אחר פרט למיקום GPS לאימות נוכחות בלבד.</p>
                     </div>
                 </div>
 
                 <div style="display:flex; gap:12px; align-items:flex-start; padding:14px; background:var(--surface-2); border-radius:16px; border:1px solid var(--border-light);">
                     <span style="font-size:1.4rem; flex-shrink:0;"><span class="icon icon-lg" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span></span>
                     <div>
-                        <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">GPS לאימות בלבד</p>
-                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">המיקום נמדד רק לצורך אימות נוכחות בטווח שהוגדר על ידי המדריך. אין מעקב ברקע.</p>
+                        <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">GPS לאימות נוכחות בלבד</p>
+                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">המיקום נמדד רק לצורך אימות מיקום המשתמש לפי הוראתו ולא מתבצע בזמן שהאפליקציה לא פעילה.</p>
                     </div>
                 </div>
 
@@ -1673,15 +1675,23 @@
                     <span style="font-size:1.4rem; flex-shrink:0;"><span class="icon icon-lg" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span></span>
                     <div>
                         <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">לא מבזבז מקום</p>
-                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">זוהי אפליקציית Web (PWA) — היא תופסת פחות מ-1MB בזיכרון ואין צורך בעדכונים דרך החנות.</p>
+                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">האפליקציה היא Web App — אין הורדה, אין עדכונים ידניים, ותופסת פחות מ-1MB. ניתן להתקין על מסך הבית לנוחות מרבית.</p>
                     </div>
                 </div>
 
                 <div style="display:flex; gap:12px; align-items:flex-start; padding:14px; background:var(--surface-2); border-radius:16px; border:1px solid var(--border-light);">
                     <span style="font-size:1.4rem; flex-shrink:0;"><span class="icon icon-lg" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></span>
                     <div>
-                        <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">ללא הרשאות מיותרות</p>
-                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">אנחנו מבקשים רק הרשאת מיקום. זה הכל. שקיפות מלאה היא ערך עליון אצלנו.</p>
+                        <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">ללא הרשאות מיוחדות</p>
+                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">היחידה שנדרשת היא GPS לאימות מיקום. שאר ההרשאות (מצלמה, אנשי קשר, מיקרופון) לא נדרשות ולא מבוקשות.</p>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:12px; align-items:flex-start; padding:14px; background:var(--surface-2); border-radius:16px; border:1px solid var(--border-light);">
+                    <span style="font-size:1.4rem; flex-shrink:0;"><span class="icon icon-lg" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span></span>
+                    <div>
+                        <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">קוד פתוח (Open Source)</p>
+                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">האפליקציה היא פרויקט קוד פתוח — הקוד שלה זמין לעיון, ביקורת ושיפור על ידי כל אחד. שקיפות מלאה, ללא סודות.</p>
                     </div>
                 </div>
 
@@ -1695,7 +1705,6 @@
         </div>
     </div>
 </div>
-
 
 
     <!-- BOTTOM NAV -->
