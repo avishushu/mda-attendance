@@ -982,7 +982,7 @@
         <img id="splash-logo" src="micon2.png" alt="I'm Here" style="width:160px;height:160px;object-fit:contain;border-radius:28px;">
         <div id="splash-divider"></div>
         <h1 style="margin-bottom:4px;">I'm Here</h1>
-        <p>מערכת נוכחות חכמה | v1.0</p>
+        <p>מערכת נוכחות חכמה | v1.0.1</p>
     </div>
 
     <!-- FAB Install -->
@@ -1011,12 +1011,12 @@
         <!-- AUTH -->
         <section id="view-auth" class="card auth-card">
             <div id="login-section">
-                <h2 style="display:block;text-align:center;">התחברות מהירה</h2>
-                <!-- Admin login message banner -->
+                    <!-- Admin login message banner -->
                 <div id="login-admin-message" class="hidden" style="background:linear-gradient(135deg,rgba(220,38,38,0.08),rgba(220,38,38,0.04));border:1.5px solid rgba(220,38,38,0.25);border-radius:var(--r-md);padding:14px 16px;margin-bottom:18px;display:flex;gap:10px;align-items:flex-start;">
                     <span style="font-size:1.3rem;flex-shrink:0;"><span class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></span></span>
                     <p id="login-admin-message-text" style="font-size:0.92rem;color:var(--ink);line-height:1.65;margin:0;font-weight:500;"></p>
                 </div>
+                <h2 style="display:block;text-align:center;">התחברות מהירה</h2>            
                 <form id="form-login">
     <input type="text" id="login-email" placeholder="תעודת זהות" required autocomplete="username">
     <input type="password" id="login-pass" placeholder="סיסמה" required autocomplete="current-password">
@@ -1073,15 +1073,15 @@
                 <div style="font-size:3.5rem;margin-bottom:16px;"><span class="icon icon-3xl" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span></div>
                 <h2 style="justify-content:center;margin-bottom:12px;">חשבונך ממתין לאישור</h2>
                 <p style="color:var(--muted);font-size:0.95rem;line-height:1.7;margin-bottom:28px;">
-                    כדי לגשת למערכת, שלח הודעה לתמיכה הטכנית עם הפרטים הבאים ומנהל המערכת יאשר את חשבונך.
+                    כדי לגשת למערכת, שלח הודעה לתמיכה הטכנית עם הפרטים הבאים ומלל רלוונטי והמתן לאישור חשבונך.
                 </p>
                 <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-md);padding:18px;margin-bottom:24px;text-align:right;">
                     <label style="margin-bottom:6px;">שם הקורס:</label>
-                    <input type="text" id="frozen-course-name" placeholder="לדוגמה: קורס החייאה מתקדמת" style="margin-bottom:12px;">
+                    <input type="text" id="frozen-course-name" placeholder="לדוגמה: קורס חובשים בכירים מרץ 25 ירקון" style="margin-bottom:12px;">
                     <label style="margin-bottom:6px;">מספר הקורס:</label>
-                    <input type="text" id="frozen-course-number" placeholder="לדוגמה: 2024-07" style="margin-bottom:12px;">
-                    <label style="margin-bottom:6px;">שם המדריך:</label>
-                    <input type="text" id="frozen-instructor-name" placeholder="שם פרטי ומשפחה של המדריך" style="margin-bottom:0;">
+                    <input type="text" id="frozen-course-number" placeholder="6 ספרות, ניתן למצוא במסך הקורס במודל" style="margin-bottom:12px;">
+                    <label style="margin-bottom:6px;">פרטים נוספים:</label>
+                    <input type="text" id="frozen-instructor-name" placeholder="פרטים נוספים שאתה חושב שרלוונטיים" style="margin-bottom:0;">
                 </div>
                 <button id="btn-frozen-send" style="margin-bottom:12px;"><span class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span> שלח פנייה לתמיכה</button>
                 <button class="outline" id="btn-frozen-logout" style="margin-top:0;">התנתקות מהמערכת</button>
@@ -1235,7 +1235,7 @@
             <h2 id="report-title">נוכחות חיה</h2>
             <!-- Round navigation (hidden when only 1 round) -->
             <div id="round-nav-bar" class="hidden" style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
-                <span style="font-size:0.82rem;color:var(--muted);font-weight:600;">סיבוב:</span>
+                <span style="font-size:0.82rem;color:var(--muted);font-weight:600;">בדיקה:</span>
                 <div id="round-tabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
             </div>
             <p id="bypass-status-text" class="text-orange hidden" style="margin-bottom:10px; font-weight:bold;"></p>
@@ -1244,7 +1244,7 @@
             <div class="action-row" style="display:flex; gap:8px; margin-bottom:15px;">
                 <button class="outline action-btn-small" id="btn-copy-session" style="flex:1;"><span class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></span> העתק דו"ח מהיר</button>
                 <button class="outline action-btn-small" id="btn-download-session-csv" style="flex:1;"><span class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> הורד אקסל (CSV)</button>
-                <button class="secondary action-btn-small" id="btn-add-round" style="flex:1;display:none;"><span class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span> בדיקה נוספת</button>
+                <button class="secondary action-btn-small" id="btn-add-round" style="flex:1;display:none;"><span class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>בדיקה נוספת ⚡</button>
             </div>
             
             <div id="report-container"></div>
@@ -1648,7 +1648,7 @@
         <div style="text-align:center; padding:28px 24px 16px; flex-shrink:0;">
             <div style="font-size:2.8rem; margin-bottom:8px;"><span class="icon icon-2xl" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span></div>
             <h3 style="font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:800; margin-bottom:4px; color:var(--ink);">I'm Here</h3>
-            <p style="font-size:0.85rem; color:var(--muted); margin:0;">מערכת נוכחות חכמה | v1.0</p>
+            <p style="font-size:0.85rem; color:var(--muted); margin:0;">מערכת נוכחות חכמה | v1.0.1</p>
             <p style="font-size:0.8rem; color:var(--green); font-weight:700; margin-top:4px;"><span class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span> קוד פתוח (Open Source)</p>
         </div>
 
@@ -1659,7 +1659,7 @@
                     <span style="font-size:1.4rem; flex-shrink:0;"><span class="icon icon-lg" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span></span>
                     <div>
                         <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">מאובטח לחלוטין</p>
-                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">האפליקציה לא ניגשת לאנשי הקשר שלך, לתמונות, למיקרופון, לפניות אישיות או לכל מידע אחר פרט למיקום GPS לאימות נוכחות בלבד.</p>
+                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">האפליקציה לא ניגשת לאנשי הקשר שלך, לתמונות, למיקרופון, לנתונים אישיים או לכל מידע אחר פרט למיקום GPS לאימות נוכחות בלבד.</p>
                     </div>
                 </div>
 
@@ -1667,7 +1667,7 @@
                     <span style="font-size:1.4rem; flex-shrink:0;"><span class="icon icon-lg" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span></span>
                     <div>
                         <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">GPS לאימות נוכחות בלבד</p>
-                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">המיקום נמדד רק לצורך אימות מיקום המשתמש לפי הוראתו ולא מתבצע בזמן שהאפליקציה לא פעילה.</p>
+                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">המיקום נמדד רק לצורך אימות מיקום המשתמש בזמן אמת לפי הוראתו ולא מתבצע בזמן שהאפליקציה לא פעילה.</p>
                     </div>
                 </div>
 
@@ -1683,7 +1683,7 @@
                     <span style="font-size:1.4rem; flex-shrink:0;"><span class="icon icon-lg" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></span>
                     <div>
                         <p style="font-weight:700; font-size:0.92rem; margin-bottom:3px;">ללא הרשאות מיוחדות</p>
-                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">היחידה שנדרשת היא GPS לאימות מיקום. שאר ההרשאות (מצלמה, אנשי קשר, מיקרופון) לא נדרשות ולא מבוקשות.</p>
+                        <p style="font-size:0.83rem; color:var(--muted); line-height:1.5;">ההרשאה היחידה שנדרשת היא GPS לאימות מיקום. שאר ההרשאות (מצלמה, אנשי קשר, מיקרופון) לא נדרשות ולא מבוקשות.</p>
                     </div>
                 </div>
 
@@ -1700,7 +1700,7 @@
 
         <div style="padding:16px 24px 24px; flex-shrink:0; border-top:1px solid var(--border-light);">
             <button id="btn-close-info-modal" style="width:100%; padding:16px; border-radius:16px; font-weight:800; font-size:1rem; box-shadow:0 4px 12px rgba(220,38,38,0.2);">
-                הבנתי, תודה! <span class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></span>
+                אהבתי, תודה! 👍<span class="icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg></span>
             </button>
         </div>
     </div>
